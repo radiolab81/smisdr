@@ -163,6 +163,8 @@ Because the secondary memory interface is DMA-driven, the CPUs remain practicall
 
 Example app:
 
-- a small I/Q WAV player for the COHIRADIA project (https://www.cohiradia.org/de/)
+- a small I/Q WAV player (or recorder) for the COHIRADIA project (https://www.cohiradia.org/de/)
+
+  
 
 
