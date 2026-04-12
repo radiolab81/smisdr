@@ -79,5 +79,41 @@ pi@SMISDR:~/smisdr $ ls /dev/smi
 /dev/smi
 ```
 
+The pin assignment of the header to the DAC (or ADC) is shown in the following diagram.
 
+```console
+/*
+ * SMI 16-Bit Pin-Belegung auf dem Raspberry Pi (GPIO):
+ * --------------------------------------------------
+ * Daten-Bits (D0-D15):
+ * SD0  : GPIO 8  (Pin 24) | SD8  : GPIO 16 (Pin 36)
+ * SD1  : GPIO 9  (Pin 21) | SD9  : GPIO 17 (Pin 11)
+ * SD2  : GPIO 10 (Pin 19) | SD10 : GPIO 18 (Pin 12)
+ * SD3  : GPIO 11 (Pin 23) | SD11 : GPIO 19 (Pin 35)
+ * SD4  : GPIO 12 (Pin 32) | SD12 : GPIO 20 (Pin 38)
+ * SD5  : GPIO 13 (Pin 33) | SD13 : GPIO 21 (Pin 40)
+ * SD6  : GPIO 14 (Pin  8) | SD14 : GPIO 24 (Pin 15)
+ * SD7  : GPIO 15 (Pin 10) | SD15 : GPIO 25 (Pin 26)
+ *
+ * Steuer-Signale:
+ * SWE  : GPIO 7  (Pin 26) - SMI Write Enable (Taktet die Daten in den DAC)
+ *
+ * Hinweis:
+ * Die GPIOs müssen ggf. auf die Alternate Function 1 'SMI' gesetzt werden.
+ * Das 'smi-dev' Overlay übernimmt dies normalerweise beim Booten automatisch.
+ */
+```
+By setting the core_freq
+to 250 MHz in the config.txt, the following clock rates result, with which a DAC / ADC can work very well.
+
+```console
+/*
+target-rate	cycles (total)	real-rate	error
+5.0 MSPS	  25	            5.0000 MSPS		0% (ok)
+6.25 MSPS	  20	            6.2500 MSPS		0% (ok)
+10.0 MSPS	  12.5	           10.4167 MSPS		+4.1% (bad choice)
+12.5 MSPS	  10	           12.5000 MSPS		0% (ok)
+15.625 MSPS	  8	               15.6250 MSPS		0% (ok)
+25.0 MSPS	  5	               25.0000 MSPS		0% (ok) */
+```
 
