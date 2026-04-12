@@ -119,9 +119,9 @@ target-rate	cycles (total)	real-rate	error
 
 ### repo-structure
 - `README.md`: This file
-- `smi_util.c`: Tool to read/write the current SMI settings and send/receive test data. You can build it with make (see Makefile)
-- `smi_sinus.c`: Tool for generating and outputting a sine waveform at a specific data rate, can be build by build_smi_sinus.sh
-- `smi_tcp_streaming_dac.c`: Main tool for streaming baseband or RF data, receives data on port 1234 from external computers/apps such as GNU Radio or from localhost with internal apps, can be build by build_smi_tcp_streamig_dac.sh
+- `smi_util.c`: Tool to read/write the current SMI settings and send/receive test data. You can build it with `make` (see Makefile)
+- `smi_sinus.c`: Tool for generating and outputting a sine waveform at a specific data rate, can be build by `build_smi_sinus.sh`
+- `smi_tcp_streaming_dac.c`: Main tool for streaming baseband or RF data, receives data on port 1234 from external computers/apps such as GNU Radio or from localhost with internal apps, can be build by `build_smi_tcp_streamig_dac.sh`
 
   Similar to a Red Pitaya, it receives commands on port 5000 for on-the-fly adjustment of the sample rate and bus width (8/16 bits).
 
