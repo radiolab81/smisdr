@@ -167,7 +167,7 @@ Example app:
 
 The smisdr represents a very cost-effective approach/replacement for the ADALM2000, Red-Pitaya, or the obsolete FL2000 USB-VGA adapter (8-bit only). Usable DACs range from simple 8-10 bit R2R-ladder-DACs to common 12-14 bit parallel-DACs (and ADCs) from manufacturers like Analog, Microchip, or TI.
 
-The ability to easily build your own HATs with the desired bit width provides access to all frequency ranges within signal bandwidth corresponding to the Second Memory Interface.
+The ability to easily build your own HATs with the desired bit width provides access to all frequency ranges within signal bandwidth corresponding to the Secondary Memory Interface.
 
 An SD card image of an already installed smisdrOS will be available shortly.
 
