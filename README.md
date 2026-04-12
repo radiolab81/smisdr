@@ -142,6 +142,12 @@ echo -n "width 8" | nc -w 1 192.168.1.135 5000
 #### set 16 bit dac width
 echo -n "width 16" | nc -w 1 192.168.1.135 5000
 
+
+192.168.1.135 ip addr of smisdr device (raspi4)
+
+- `tcp_test.py`: test tool for generating and outputting a sine waveform at a specific data rate via TCP/localhost to smi_tcp_streaming_dac process
+
+
 The streaming daemon instantly displays the control data from port 5000 and adjusts the signal processing of the SMI accordingly in real time.  
 
 ```console
@@ -151,8 +157,12 @@ core_f=250000496
 [CTRL] Update: Ziel 5.00 MSPS -> Real 5.0000 MSPS (Cycles: 25 [6/13/6])
 [DATA] Client verbunden!
 ```
+Because the secondary memory interface is DMA-driven, the CPUs remain practically idle even at higher RF data rates via ADC/DAC. This allows - similar to the Red Pitaya - the installation of custom SDR applications on the "smisdr" device to, for example, filter, resample or frequency-shift the incoming data stream using software NCOs.
+
+![htop](https://github.com/radiolab81/smisdr/blob/main/www/htop.jpg)
+
+Example app:
+
+- a small I/Q WAV player for the COHIRADIA project (https://www.cohiradia.org/de/)
 
 
-192.168.1.135 ip addr of smisdr device (raspi4)
-
-- `tcp_test.py`: test tool for generating and outputting a sine waveform at a specific data rate via TCP/localhost to smi_tcp_streaming_dac process
