@@ -234,7 +234,7 @@ void *network_thread(void *arg) {
 void handle_sigint(int sig) {
     sig_count++;
     
-    if (sig_count = 1) {
+    if (sig_count == 1) {
       stop = 1;
     } else {
       _exit(1);
