@@ -40,6 +40,7 @@ target-rate	cycles (total)	real-rate	error
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/ioctl.h>
+#include <signal.h>
 
 
 // system-spezifischen Fixes für Kernel 6.12 (32-Bit)
@@ -51,6 +52,9 @@ target-rate	cycles (total)	real-rate	error
 #define BUFFER_SIZE (4 * 1024 * 1024) // 4 MB
 #define SAMPLE_RATE 5000000.0         // 5 MSPS
 #define SINE_FREQ   1000000.0         // 1 MHz
+
+volatile sig_atomic_t stop = 0;
+int sig_count = 0;
 
 int fd;
 struct smi_settings settings;
@@ -119,8 +123,23 @@ void update_smi_settings(int msps, int width) {
 }
 
 
+void handle_sigint(int sig) {
+    sig_count++;
+
+    if (sig_count == 1) {
+      stop = 1;  // normal termination / cleanup
+    } else {  
+      _exit(1);  // hard termination
+    }
+}
 
 int main() {
+    struct sigaction sa;
+    sa.sa_handler = &handle_sigint;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGINT, &sa, NULL);
+
     // 1. Device öffnen
     fd = open("/dev/smi", O_RDWR);
     if (fd < 0) {
@@ -147,9 +166,10 @@ int main() {
 
     // 4. Endlose Ausgabe
     printf("Starte kontinuierliche Übertragung. Beenden mit Strg+C.\n");
-    while (1) {
+    while (!stop) {
         ssize_t written = write(fd, buffer, BUFFER_SIZE);
         if (written < 0) {
+            if (stop) break;
             perror("Fehler beim Schreiben auf SMI");
             break;
         }
