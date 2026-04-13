@@ -41,6 +41,7 @@ target-rate	cycles (total)	real-rate	error
 #include <linux/ioctl.h>
 #include <linux/broadcom/bcm2835_smi.h>
 #include <netinet/tcp.h>
+#include <signal.h>
 
 // Kernel 6.12 Fixes
 #undef BCM2835_SMI_IOC_MAGIC
@@ -53,8 +54,11 @@ target-rate	cycles (total)	real-rate	error
 #define BUFFER_SIZE (4 * 1024 * 1024)
 
 uint8_t *buffer_a, *buffer_b, *active_buffer;
-int buffer_ready = 0, smi_fd, stop = 0;
+int buffer_ready = 0, smi_fd;
 int buf_a_busy = 0, buf_b_busy = 0;
+
+volatile sig_atomic_t stop = 0;
+int sig_count = 0;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond_free = PTHREAD_COND_INITIALIZER; // Signal für "Puffer frei"
@@ -227,7 +231,23 @@ void *network_thread(void *arg) {
     return NULL;
 }
 
+void handle_sigint(int sig) {
+    sig_count++;
+    
+    if (sig_count = 1) {
+      stop = 1;
+    } else {
+      _exit(1);
+    } 
+}
+
 int main() {
+    struct sigaction sa;
+    sa.sa_handler = &handle_sigint;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGINT, &sa, NULL);
+
     smi_fd = open("/dev/smi", O_RDWR);
     buffer_a = malloc(BUFFER_SIZE); buffer_b = malloc(BUFFER_SIZE);
     update_smi_settings(5, 16); // startup default 5 MSPS / 16 bit mode
@@ -243,7 +263,6 @@ int main() {
         pthread_mutex_unlock(&mutex);
 
         write(smi_fd, data, BUFFER_SIZE);
-
 
         pthread_mutex_lock(&mutex);
         if (data == buffer_a) buf_a_busy = 0; else buf_b_busy = 0;
