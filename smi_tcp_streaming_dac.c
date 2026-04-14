@@ -42,6 +42,7 @@ target-rate	cycles (total)	real-rate	error
 #include <linux/broadcom/bcm2835_smi.h>
 #include <netinet/tcp.h>
 #include <signal.h>
+#include <sched.h>
 
 // Kernel 6.12 Fixes
 #undef BCM2835_SMI_IOC_MAGIC
@@ -242,6 +243,12 @@ void handle_sigint(int sig) {
 }
 
 int main() {
+    struct sched_param sp;
+    sp.sched_priority = sched_get_priority_max(SCHED_FIFO);
+    if (sched_setscheduler(0, SCHED_FIFO, &sp) == -1) {
+        perror("Warnung: Konnte Real-Time Priorität nicht setzen (sudo vergessen?)");
+    }
+
     struct sigaction sa;
     sa.sa_handler = &handle_sigint;
     sa.sa_flags = 0;
