@@ -250,6 +250,15 @@ int main() {
 
     smi_fd = open("/dev/smi", O_RDWR);
     buffer_a = malloc(BUFFER_SIZE); buffer_b = malloc(BUFFER_SIZE);
+
+    if (!buffer_a || !buffer_b) {
+        fprintf(stderr, "[ERROR] Speicherzuweisung für Puffer fehlgeschlagen!\n");
+        if (buffer_a) free(buffer_a);
+        if (buffer_b) free(buffer_b);
+        close(smi_fd);
+        return 1;
+    }
+
     update_smi_settings(5, 16); // startup default 5 MSPS / 16 bit mode
 
     pthread_t net_t, ctrl_t;
@@ -269,6 +278,12 @@ int main() {
         pthread_cond_signal(&cond_free); // Wecke Netzwerk-Thread
         pthread_mutex_unlock(&mutex);
     }
+
+    pthread_cond_broadcast(&cond_free); 
+    pthread_cond_broadcast(&cond);
+
+    pthread_join(net_t, NULL);
+    pthread_join(ctrl_t, NULL);
 
     if (smi_fd >= 0) {
         if (close(smi_fd) == -1) {
