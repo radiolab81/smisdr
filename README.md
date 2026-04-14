@@ -200,5 +200,5 @@ Then restart your pi. The Raspberry Pi should be connected directly to the USB p
 
 ***In all cases, however, the same principles apply as with other SDR applications: use short, high-quality data cables; best Gigabit Ethernet connections are useless if the RF data has to be transmitted over a poor network or a congested router; use direct connections whenever possible. When reading or writing RF data from storage media, use FAST(!) storage media and ensure that the data is stored unfragmented(!) on the medium.***
 
-An SD card image of an already installed smisdrOS will be available shortly.
+For an SD card image of an already installed smisdrOS see release.
 
