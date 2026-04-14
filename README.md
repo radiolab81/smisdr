@@ -196,7 +196,7 @@ The entire file should look something like this:
 console=serial0,115200 console=tty1 root=PARTUUID=7416d161-02 rootfstype=ext4 fsck.repair=yes rootwait modules-load=dwc2,g_ether
 ```
 
-Then restart your pi. The Raspberry Pi should be connected directly to the USB port of the RF-streaming PC. If necessary, use a power splitter cable to supply power to the Raspberry Pi if your USB port cannot provide the required current.
+Then restart your pi. The Raspberry Pi should be connected directly to the USB port of the RF-streaming PC. If necessary, use a USB power splitter cable to supply power to the Raspberry Pi if your USB port cannot provide the required current. Note that not all USB ports on a Raspberry Pi are usable for this USB-to-Ethernet tunnel!
 
 An SD card image of an already installed smisdrOS will be available shortly.
 
