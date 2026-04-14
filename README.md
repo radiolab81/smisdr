@@ -159,7 +159,7 @@ core_f=250000496
 ```
 Because the secondary memory interface is DMA-driven, the CPUs remain practically idle even at higher RF data rates via ADC/DAC. This allows - similar to the Red Pitaya - the installation of custom SDR applications on the "smisdr" device to, for example, filter, resample or frequency-shift the incoming data stream using software NCOs.
 
-![htop](https://github.com/radiolab81/smisdr/blob/main/www/htop.jpg)
+![htop](https://github.com/radiolab81/smisdr/blob/main/www/htop.jpg)*htop on rpi4 while streaming RF over GigabitEthernet to SMIDAC*
 
 Example app:
 
@@ -169,6 +169,34 @@ The smisdr represents a very cost-effective approach/replacement for the ADALM20
 
 The ability to easily build your own HATs with the desired bit width provides access to all frequency ranges within signal bandwidth corresponding to the Secondary Memory Interface.
 
-An SD card image of an already installed smisdrOS will be available shortly.
+While the Raspberry Pi 4 is the ideal candidate for streaming via SMI, older/smaller RPi versions (3B, Zero 2) with reduced performance could still be a viable option. Although these lack fast Gigabit Ethernet, they can be operated in USB Ethernet Gadget mode! In this mode, the Raspberry Pis are connected directly to the streaming computer via USB, running apps like GNU Radio. They themselves become an Ethernet card and can therefore receive/transmit data via TCP/IP . This is the only way to achieve low-latency, high-speed I/O on these boards; don't even think about using the Wi-Fi on these boards, it would be a frustrating endeavor. Of course, with these Raspberry Pi versions, despite the DMA-driven SMI I/O, the possibilities regarding additional internal signal processing/generation are limited (for example, via additional apps). They don't come close to the "RPi4 flagship". Forget about single Core Raspberry Pi (Pi 1 or Zero) unless you have too much time to waste. 
 
+The Raspberry Pi 5? An interesting candidate with one very serious flaw for this project: it lacks a secondary memory interface. The Pi 5's high-speed I/O is more akin to the Raspberry Pi Pico with PIO. Very interesting and usable, but better suited to a different, specific project.
+
+How do I activate USB Ethernet gadget mode?
+
+Add the following to the very bottom of your config.txt file:  `dtoverlay=dwc2`
+
+```console
+# arm_64bit=0 -> not for trixie (deb13)
+[all]
+dtoverlay=smi
+dtoverlay=smi-dev
+arm_64bit=0
+core_freq=250
+core_freq_min=250
+force_turbo=1
+dtoverlay=dwc2
+```
+In the cmdline.txt file, add the following after rootwait: `modules-load=dwc2,g_ether`
+
+The entire file should look something like this:
+
+```console
+console=serial0,115200 console=tty1 root=PARTUUID=7416d161-02 rootfstype=ext4 fsck.repair=yes rootwait modules-load=dwc2,g_ether
+```
+
+Then restart your pi. The Raspberry Pi should be connected directly to the USB port of the RF-streaming PC. If necessary, use a power splitter cable to supply power to the Raspberry Pi if your USB port cannot provide the required current.
+
+An SD card image of an already installed smisdrOS will be available shortly.
 
