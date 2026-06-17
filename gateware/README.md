@@ -41,7 +41,7 @@ flowchart LR
     style NCO fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px
 ````
 
-🛠️ Supported & Tested Hardware
+## 🛠️ Supported & Tested Hardware
 
 We designed this Verilog IP to be as generalized and portable as possible. You don't need a massive, overpriced development board to join the fun.
 
@@ -53,7 +53,7 @@ Initial testing has already proven highly successful across a diverse lineup of 
 
     ⚡ Gowin: A wide array of Sipeed Tang Nano and Tang Primer boards.
 
-🚧 Roadmap: What to Expect
+## 🚧 Roadmap: What to Expect
 
 We are currently polishing the code base. Soon, we will populate this directory with:
 
