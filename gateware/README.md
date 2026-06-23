@@ -62,4 +62,50 @@ We are currently polishing the code base. Soon, we will populate this directory 
     Synthesis examples and pinout configurations for the mentioned development boards.
 
 
+## 📡 Protocol Preview: In-Band Signaling over smiBus / PARLIO
+
+To maximize the efficiency of the 16-bit parallel bus (smiBus / ESP32 PARLIO) while acknowledging the 14-bit hardware resolution limit of the utilized ADC/DACs (e.g., Steamlab), we implemented a highly efficient **In-Band Signaling Protocol**. 
+
+Instead of requiring dedicated control pins or interrupting the streaming process via a separate I2C/SPI bus, we utilize the two Most Significant Bits (MSBs) of the 16-bit word to interleave high-speed I/Q streaming with configuration commands.
+
+> **Hardware Context:** This protocol defines the 16-bit payload. We assume the bus is accompanied by standard parallel interface signals, specifically a continuous **`CLOCK`** and a **`VALID_DATA`** (or Write Enable) line to strobe the words into the FPGA.
+
+### 🔢 16-Bit Word Allocation Map
+
+The protocol differentiates between raw I/Q data and command words purely based on `Bit 15` and `Bit 14`.
+
+| Word Type | Bit 15 `[Control]` | Bit 14 `[Sub-Flag]` | Bits [13:8] `[Index]` | Bits [7:0] `[Payload]` |
+| :--- | :---: | :---: | :---: | :---: |
+| **I-Sample** | `0` | `0` | <- | **14-Bit I-Data `[13:0]`** | -> |
+| **Q-Sample** | `0` | `1` | <- | **14-Bit Q-Data `[13:0]`** | -> |
+| **Command Init** | `1` | `0` | `111111` *(Sync)* | **8-Bit ASCII Command** |
+| **Param Chunk** | `1` | `0` | **6-Bit Counter** (0, 1...)| **8-Bit Parameter Data** |
+| **Command End** | `1` | `1` | *Ignored / 0* | **8-Bit ASCII 'E'** |
+
+### 🛠️ Command Reference
+
+Currently supported command payloads `[7:0]` during the **Command Init** phase:
+* **`R` (Rate):** Configure the I/Q input sample rate.
+* **`S` (Shift):** Set the frequency shift offset for the hardware DUC/NCO.
+* **`E` (End):** Explicitly closes the command transmission state.
+
+### 🌊 Transmission Flow Example
+
+During normal SDR operation, the bus will continuously stream interleaved I and Q samples. When the host needs to reconfigure the FPGA (e.g., tuning the NCO to a new frequency), it injects a command sequence directly into the stream:
+
+1. **`[0][0][ I-Data 14-bit ]`** (Normal Streaming)
+2. **`[0][1][ Q-Data 14-bit ]`** (Normal Streaming)
+3. **`[1][0][ Index: 63 ][ ASCII 'S' ]`** (Command Init: Start Frequency Shift)
+4. **`[1][0][ Index: 00 ][ Data Byte 0 ]`** (Param Chunk: LSB of frequency)
+5. **`[1][0][ Index: 01 ][ Data Byte 1 ]`** (Param Chunk: Next byte)
+6. **`[1][1][ Index: 00 ][ ASCII 'E' ]`** (Command End: Execute configuration)
+7. **`[0][0][ I-Data 14-bit ]`** (Resume Streaming)
+8. **`[0][1][ Q-Data 14-bit ]`** (Resume Streaming)
+
+### 💡 Implementation Notes for FPGA Developers
+
+* **I/Q Phase Alignment:** Since I and Q arrive sequentially, the FPGA gateware must latch the `I-Sample` into a temporary register. Once the `Q-Sample` (Bit 14 = 1) arrives, both values are fed into the DSP core (DUC/DDC) simultaneously on the next clock cycle to prevent phase offsets.
+* **Robust Parameter Parsing:** The 6-bit counter in `[13:8]` allows the FPGA to assemble 16-bit, 32-bit, or 64-bit parameter registers securely. If a byte is lost or misaligned, the explicit index prevents the parameter register from becoming corrupted. Setting the index to `111111` (63) during the Command Init acts as a robust reset condition for the protocol state machine.
+
+
 Stay tuned, warm up your soldering irons, and get your synthesis tools ready. The smiSDR ecosystem is about to get a whole lot wider!
