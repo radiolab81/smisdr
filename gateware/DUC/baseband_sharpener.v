@@ -43,7 +43,6 @@ module baseband_sharpener (
     // speichern wir die eingehenden Samples parallel in 6 unabhängige BRAM-Blöcke.
     // So können wir in einem einzigen Taktzyklus 12 Werte (2 pro Block) auslesen 
     // und multiplizieren! Das spart massiv DSPs und Logik.
-    (* ramstyle = "M9K" *) reg signed [15:0] ram_i_a_0 [0:127];
     (* ramstyle = "M9K" *) reg signed [15:0] ram_i_a_0 [0:127]; (* ramstyle = "M9K" *) reg signed [15:0] ram_i_b_0 [0:127];
     (* ramstyle = "M9K" *) reg signed [15:0] ram_i_a_1 [0:127]; (* ramstyle = "M9K" *) reg signed [15:0] ram_i_b_1 [0:127];
     (* ramstyle = "M9K" *) reg signed [15:0] ram_i_a_2 [0:127]; (* ramstyle = "M9K" *) reg signed [15:0] ram_i_b_2 [0:127];
