@@ -146,6 +146,7 @@ echo -n "width 16" | nc -w 1 192.168.1.135 5000
 192.168.1.135 ip addr of smisdr device (raspi4)
 
 - `tcp_test.py`: test tool for generating and outputting a sine waveform at a specific data rate via TCP/localhost to smi_tcp_streaming_dac process
+- `gateware`: HDL code for FPGA extensions such as hardware-accelerated I/Q processing, DUC, DDC, ...
 
 
 The streaming daemon instantly displays the control data from port 5000 and adjusts the signal processing of the SMI accordingly in real time.  
