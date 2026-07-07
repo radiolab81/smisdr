@@ -116,17 +116,71 @@ The gateware is validated using a cycle-accurate C++ simulation framework powere
 
 The architecture's performance has been verified using real-world wideband multi-carrier RF captures from the **Cohiradia** project. The following analysis highlights the DUC's behavioral response under high-stress conditions.
 
-### 4.1 Mediumwave (MW) Multi-Carrier Scenario (`cohi_spec_1250kHz.png`)
+### 4.1 Mediumwave (MW) Multi-Carrier Scenario
 * **Signal Profile:** A high-density network of synthesized historical broadcast AM transmitters (including the simulated Vox-Haus on 783 kHz and various vintage music channels up to 1359 kHz).
-* **DUC Performance Analysis:** Processing this massive block at 1.25 Msps tests the full bandwidth capability of the upsampler. The spectrum demonstrates incredibly sharp, vertical AM carriers with symmetric sidebands. The absence of a central spike confirms absolute **LO leakage suppression**, proving that the digital NCO and complex multipliers operate with flawless mathematical precision. 
+* **DUC Performance Analysis:** Processing this massive block at 1.25 Msps tests the full bandwidth capability of the upsampler. The spectrum demonstrates incredibly sharp, vertical AM carriers with symmetric sidebands. The absence of a central spike confirms absolute **LO leakage suppression**, proving that the digital NCO and complex multipliers operate with flawless mathematical precision.
 
-### 4.2 Longwave (LW) Spectrum Profile (`cohi_spec_lw.png`)
+![cohimw1](https://github.com/radiolab81/smisdr/blob/main/gateware/www/cohi_spec_1250kHz.png)
+![cohimw2](https://github.com/radiolab81/smisdr/blob/main/gateware/www/cohi_wf_1250kHz.png)
+
+```console
+Frequency	SNR	Country	Programme	TX Site
+783.0 kHz 	- 	- 	Ansage Vox-Haus (Dauerschleife) 	synthetized
+819.0 kHz 	- 	- 	div. Wortbeiträge von Schallplatten mit Rundfunkbezug (20er/30er Jahre) 	-
+855.0 kHz 	- 	- 	Deutsche Tanzmusik 1925 	-
+891.0 kHz 	- 	- 	div. originale Rundfunkmitschitte (20er/30er Jahre) 	-
+927.0 kHz 	- 	- 	Deutsche Tanzmusik 1928 	-
+963.0 kHz 	- 	- 	Deutsche Tanzmusik 1930 	-
+999.0 kHz 	- 	- 	Amerikanische Tanzmusik (Odeon-Swing-Musik-Serie) 	-
+1035.0 kHz 	- 	- 	Originaler Rundfunkbericht RRG aus dem Cotton-Club, New York, 1931 	-
+1071.0 kHz 	- 	- 	Deutsche Tanzmusik 1932 	-
+1107.0 kHz 	- 	- 	Deutsche Tanzmusik 1938 	-
+1143.0 kHz 	- 	- 	Deutsche Tanzmusik 1940 	-
+1179.0 kHz 	- 	- 	Rundfunkmitschnitte deutsches Programm der BBC 	-
+1215.0 kHz 	- 	- 	Deutscher Propaganda-Swing (über Kurzwelle verbreitet, mit anti-britischen Texten) 	-
+1251.0 kHz 	- 	- 	Deutsche Tanzmusik 1943 	-
+1287.0 kHz 	- 	- 	Deutsche Tanzmusik 1946-48 	-
+1323.0 kHz 	- 	- 	Deutsche Tanzmusik 50er Jahre I 	-
+1359.0 kHz 	- 	- 	Deutsche Tanzmusik 50er Jahre II 	-
+```
+
+
+### 4.2 Longwave (LW) Spectrum Profile
 * **Signal Profile:** Low-frequency AM broadcasts positioned very close to the DC (0 Hz) boundary line.
 * **DUC Performance Analysis:** Modulating signals in close spectral proximity to the carrier frequency risks introducing high-amplitude CIC imaging artifacts and passband ripple distortion. Thanks to the cascaded FIR architectures in the `multirate_upsampler` and the steep stopband attenuation of the `baseband_sharpener`, the noise floor across the entire LW band remains flat and suppressed.
 
-### 4.3 49m Shortwave Band (SW) (`cohi_spec_49m.png`)
+![cohilw1](https://github.com/radiolab81/smisdr/blob/main/gateware/www/cohi_spec_lw.png)
+
+```console
+Frequency	SNR	Country	Programme	TX Site
+147.3 kHz 	48 	D 	DDH47, FSK METEO 	Pinneberg
+153.0 kHz 	44 	ROU 	SRR Antena Satelor R. România Actualități 	Brașov/Bod Colonie
+162.0 kHz 	56 	F 	TDF time signal 	Allouis
+171.0 kHz 	42 	MRC 	Médi 1 	Nador
+189.0 kHz 	43 	ISL 	RÚV Rás 1/RÚV Rás 2 	Gufuskálar (Hellissandur)
+198.0 kHz 	56 	G 	BBC Radio4 	Droitwich/Mast A-B; Burghead; Westerglen; Dartford Tunnel;
+225.0 kHz 	50 	POL 	Polskie Radio Jedynka 	Solec Kujawski/Kabat
+252.0 kHz 	45 	ALG 	Chaîne 3 	Tipaza
+```
+
+### 4.3 49m Shortwave Band (SW)
 * **Signal Profile:** Receptions of real-world ionospheric shortwave stations (e.g., Channel 292 on 6070 kHz, Moosbrunn, Kall-Krekel) subject to severe atmospheric fading, noise, and erratic signal peaks.
 * **DUC Performance Analysis:** High Peak-to-Average Power Ratios (PAPR) originating from multi-station shortwave inputs regularly cause integer overflows in poorly designed mixers, resulting in severe Intermodulation Distortion (IMD). The spectrum shows clean, isolated station peaks. The convergent rounding mechanism inside `duc_mixer.v` ensures that the quantization noise floor stays uniformly low, preserving weak DX stations even when adjacent to high-power international transmitters.
+
+![cohi49m1](https://github.com/radiolab81/smisdr/blob/main/gateware/www/cohi_spec_49m.png)
+
+```console
+Frequency	SNR	Country	Programme	TX Site
+6005.0 kHz 	- 	SVK 	Radio Slovakia 	Kall-Krekel
+6030.0 kHz 	- 	USA 	Radio Marti 	Greenville
+6055.0 kHz 	- 	AUT 	Radio Austria (from 12:00: 6070: SM Radio Dessau) 	Moosbrunn
+6070.0 kHz 	- 	D 	Channel 292la:de,en,nl,it 	Rohrbach/Waal 93
+6085.0 kHz 	- 	D 	various 	Kall/Auf der Heide
+6115.0 kHz 	- 	D 	Radio SE-TA 2 	Gera; HFCC: Hartenstein
+6130.0 kHz 	- 	HOL 	Radio Europa 	Alpen aan den Rijn
+6150.0 kHz 	- 	D 	Europa 24IGHF-Interessengemeinschaft Hochfrequenztechnik e.V. 	Datteln;
+6160.0 kHz 	- 	D 	Shortwave Goldcarries Shortwave Radio and other programmes 	Winsen an der Aller
+```
 
 ---
 
