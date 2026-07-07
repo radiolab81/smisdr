@@ -58,7 +58,7 @@ Initial testing has already proven highly successful across a diverse lineup of 
 
 To maximize the efficiency of the 16-bit parallel bus (smiBus / ESP32 PARLIO) while acknowledging the 14-bit hardware resolution limit of the utilized ADC/DACs (e.g., Steamlab), we implemented a highly efficient **In-Band Signaling Protocol**. 
 
-Instead of requiring dedicated control pins or interrupting the streaming process via a separate I2C/SPI bus, we utilize the two Most Significant Bits (MSBs) of the 16-bit word to interleave high-speed I/Q streaming with configuration commands.
+Instead of requiring dedicated control pins or interrupting the streaming process via a separate I2C/SPI bus, we utilize the two Most Significant Bits (MSBs) of the 16-bit word to interleave high-speed I/Q streaming with configuration commands. This is fully backward compatible with our smi_tcp_streaming_dac.c. Great!
 
 > **Hardware Context:** This protocol defines the 16-bit payload. We assume the bus is accompanied by standard parallel interface signals, specifically a continuous **`CLOCK`** and a **`VALID_DATA`** (or Write Enable) line to strobe the words into the FPGA.
 
