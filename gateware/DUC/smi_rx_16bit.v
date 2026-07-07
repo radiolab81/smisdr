@@ -117,8 +117,6 @@ module smi_rx_16bit #(
             // sende 4 Bytes (Idx 0-3), sende EXEC (11).
             if (de_pulse) begin
                 case (ctrl_bits)
-            if (de_pulse) begin
-                case (ctrl_bits)
                     
                     // ----------------------------------------------------
                     // 00: I-Sample
