@@ -106,7 +106,7 @@ The gateware is validated using a cycle-accurate C++ simulation framework powere
 
 ### Key Simulation Functionalities:
 * **Standard Driver Emulation:** Programmatically constructs In-Band command structures based on command-line flags (`--rate`, `--shift`) to test the input parser's resilience.
-* **Passthrough Modus (`--passthrough`):** Bypasses TB-generated signals to ingest raw binary streams (`testbench_passthrough_ci16.iq`) compiled from real-world recordings. This ensures that the exact byte stream emitted by the `cohi_wav_to_smi_iq.py` host utility matches the hardware expectations bit-for-bit.
+* **Passthrough Modus (`--passthrough`):** Bypasses TB-generated in-band signals to ingest raw binary streams (`testbench_passthrough_ci16.iq`) compiled from real-world recordings with `cohi_wav_to_smi_iq.py` or other streaming tools like GNU Radio. This ensures that the exact byte stream emitted by host utility/sdr tools matches the hardware expectations bit-for-bit.
 * **Clock-Modulo Alignment:** Dynamically tracks the system clock ratio to assert `data_en` for exactly 5 continuous cycles, verifying the functionality of the hardware glitch filter under realistic timing scenarios.
 * **VCD Waveform Guarding:** Limits `.vcd` trace dumping to the first 100,000 cycles to avoid generating massive multi-gigabyte files during long signal sweeps.
 
