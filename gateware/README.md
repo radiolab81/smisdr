@@ -53,16 +53,8 @@ Initial testing has already proven highly successful across a diverse lineup of 
 
     ⚡ Gowin: A wide array of Sipeed Tang Nano and Tang Primer boards.
 
-## 🚧 Roadmap: What to Expect
 
-We are currently polishing the code base. Soon, we will populate this directory with:
-
-    The generalized Verilog modules (DUC/DDC, NCO, smiBus Interface).
-
-    Synthesis examples and pinout configurations for the mentioned development boards.
-
-
-## 📡 Protocol Preview: In-Band Signaling over smiBus / PARLIO
+## 📡 Protocol review: In-Band Signaling over smiBus / PARLIO
 
 To maximize the efficiency of the 16-bit parallel bus (smiBus / ESP32 PARLIO) while acknowledging the 14-bit hardware resolution limit of the utilized ADC/DACs (e.g., Steamlab), we implemented a highly efficient **In-Band Signaling Protocol**. 
 
@@ -81,6 +73,8 @@ The protocol differentiates between raw I/Q data and command words purely based 
 | **Command Init** | `1` | `0` | `111111` *(Sync)* | **8-Bit ASCII Command** |
 | **Param Chunk** | `1` | `0` | **6-Bit Counter** (0, 1...)| **8-Bit Parameter Data** |
 | **Command End** | `1` | `1` | *Ignored / 0* | **8-Bit ASCII 'E'** |
+
+![protocol01](https://github.com/radiolab81/smisdr/blob/main/gateware/www/smi_tx_protocol.png)
 
 ### 🛠️ Command Reference
 
