@@ -8,7 +8,8 @@ The architecture features strict strobe-driven execution to eliminate multi-freq
 
 ## 1. System Architecture & Core Concept
 
-The DUC serves as the bridge between the high-throughput, host-side DMA transfer domain and the strictly real-time, high-frequency DAC sampling domain. It processes baseband sample rates ($f_s$) of **250 ksps, 500 ksps, or 1.25 Msps** and upsamples the signal through a hybrid cascaded filter pipeline to a uniform intermediate frequency/sampling rate of **50 Msps**.
+The DUC serves as the bridge between the high-throughput, host-side DMA transfer domain and the strictly real-time, high-frequency DAC sampling domain. It processes baseband sample rates ($f_s$) of **250 ksps, 500 ksps, or 1.25 Msps** and upsamples the signal through a hybrid cascaded filter pipeline to a uniform intermediate frequency/sampling rate of **50 Msps**. Higher clock frequencies—such as those achieved by configuring PLLs within the synthesis tools—can be set without difficulty, and the signal processing within this chain adapts seamlessly to them. Likewise, additional I/Q bandwidths can be easily integrated.
+In our test setup, this enables interference-free operation for DATV via QO-100 or for DAB+.
 
 ### Functional Block Diagram & Data Flow
 
