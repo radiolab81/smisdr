@@ -321,7 +321,7 @@ gateware/gr-smisdr/
 ## 7. Related documentation
 
 * Protocol specification & rationale: [`gateware/README.md`](../README.md)
-* Reference HDL receiver: [`gateware/smi_rx_16bit.v`](../smi_rx_16bit.v)
+* Reference HDL receiver: [`gateware/smi_rx_16bit.v`](https://github.com/radiolab81/smisdr/blob/main/gateware/DUC/smi_rx_16bit.v)
 * Reference Verilator testbench: `sim_main.cpp`
 * Reference Python encoder (WAV → protocol file): `cohi_wav_to_smi_iq.py`
 * Live streaming host application: [COHIRADIAStreamer](https://github.com/radiolab81/COHIRADIAStreamer)
