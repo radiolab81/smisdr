@@ -256,7 +256,7 @@ verification, live-decoded against `smi_tcp_streaming_dac` and
 COHIRADIAStreamer) are provided in `examples/grc/`:
 
 ### `loopback.grc`
-![loopback flowgraph](examples/grc/loopback_grc.png)
+![loopback flowgraph](https://github.com/radiolab81/smisdr/blob/main/gateware/gr-smisdr/www/loopback_grc.png)
 
 Top half: `Wav File Source` → `Float To Complex` → `smisdr.encoder`
 (`Full-Scale 8192`, `Inject Cmd at Start = Yes`) → `smi_out` written both
@@ -272,7 +272,7 @@ conversion entirely inside GNU Radio, without touching the FPGA or a
 network link.
 
 ### `smisdr_sim.grc`
-![decoder-only flowgraph](examples/grc/smisdr_sim_grc.png)
+![decoder-only flowgraph](https://github.com/radiolab81/smisdr/blob/main/gateware/gr-smisdr/www/smisdr_sim_grc.png)
 
 A minimal decoder-only flowgraph: `TCP Source` (client to
 `smi_tcp_streaming_dac`'s streaming port, or to a live
@@ -282,7 +282,7 @@ FPGA/host stream is being interpreted correctly — including watching the
 `'S'`/`'R'` commands roll by in real time as they're issued from the
 sending application.
 
-![COHIRADIAStreamer feeding smisdr_sim.grc live](examples/grc/COHIRADIAStreamer_on_smiSDR_sim.png)
+![COHIRADIAStreamer feeding smisdr_sim.grc live](https://github.com/radiolab81/smisdr/blob/main/gateware/gr-smisdr/www/COHIRADIAStreamer_on_smiSDR_sim.png)
 
 Live validation: COHIRADIAStreamer streaming a COHIRADIA `.wav` archive
 file over TCP with `I/Q Mode = SW or FPGA DUC (16 Bit with In-Band
