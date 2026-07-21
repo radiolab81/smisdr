@@ -1,0 +1,66 @@
+id: smisdr_encoder
+label: smiSDR In-Band Encoder
+category: '[smisdr]'
+
+templates:
+  imports: from gnuradio import smisdr
+  make: smisdr.encoder(${sample_rate}, ${shift_hz}, ${master_clock}, ${scale}, ${inject_at_start})
+  callbacks:
+    - set_shift(${shift_hz})
+    - set_sample_rate(${sample_rate})
+
+parameters:
+- id: sample_rate
+  label: Sample Rate (Hz)
+  dtype: real
+  default: '250000'
+- id: shift_hz
+  label: NCO Shift (Hz)
+  dtype: real
+  default: '2e6'
+- id: master_clock
+  label: FPGA Master Clock (Hz)
+  dtype: real
+  default: '50e6'
+- id: scale
+  label: Full-Scale (14-bit)
+  dtype: int
+  default: '8191'
+- id: inject_at_start
+  label: Inject Cmd at Start
+  dtype: bool
+  default: 'True'
+  options: ['True', 'False']
+  option_labels: ['Yes', 'No']
+
+inputs:
+- label: iq_in
+  domain: stream
+  dtype: complex
+
+- label: cmd
+  domain: message
+  optional: true
+
+outputs:
+- label: smi_out
+  domain: stream
+  dtype: short
+
+documentation: |-
+  Encodes a complex I/Q stream into the smiSDR 16-bit
+  in-band signaling protocol (smiBus / ESP32 PARLIO). 
+  
+  Sample rate and NCO shift settings are prepended to the I/Q data
+  as an 'R'/'S' command sequence at startup (if "Inject Cmd at Start" is set to "Yes"). 
+  
+  To trigger updates while the flowgraph is running, send a PMT pair message
+  to the "cmd" message port—for example, from a Python block or via a
+  variable/QT GUI Range combined with a "Message Strobe":
+  pmt.cons(pmt.intern("shift"), pmt.from_double(3.5e6))
+  pmt.cons(pmt.intern("rate"),  pmt.from_double(500000.0))
+  
+  The output is a raw 16-bit short stream -> can be connected directly
+  to a File Sink or TCP Sink.
+
+file_format: 1

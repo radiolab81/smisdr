@@ -1,0 +1,50 @@
+id: smisdr_decoder
+label: smiSDR In-Band Decoder
+category: '[smisdr]'
+
+templates:
+  imports: from gnuradio import smisdr
+  make: smisdr.decoder(${master_clock}, ${scale}, ${cmd_timeout_words})
+
+parameters:
+- id: master_clock
+  label: FPGA Master Clock (Hz)
+  dtype: real
+  default: '50e6'
+- id: scale
+  label: Full-Scale (14-bit)
+  dtype: int
+  default: '8191'
+- id: cmd_timeout_words
+  label: Cmd Watchdog (Words, 0=off)
+  dtype: int
+  default: '0'
+
+inputs:
+- label: smi_in
+  domain: stream
+  dtype: short
+
+outputs:
+- label: iq_out
+  domain: stream
+  dtype: complex
+
+- label: cmd
+  domain: message
+  optional: true
+
+documentation: |-
+  Decodes the smiSDR 16-bit in-band signaling protocol (see
+  gateware/README.md and smi_rx_16bit.v) back into a complex
+  I/Q stream and extracts 'R'/'S' commands as messages on the
+  "cmd" message port (PMT dict: {"cmd": "R"|"S", "raw": u32, "hz": double}). 
+  
+  The input is a raw 16-bit short stream—compatible with a File Source
+  or TCP Source reading the output of the smisdr_encoder block (or
+  actual raw FPGA bus data). 
+  
+  The "cmd" message port can be connected, for example, to a "Message Debug"
+  block or a custom Python block for displaying or forwarding parameters.
+
+file_format: 1
