@@ -156,7 +156,7 @@ core_f=250000496
 [CTRL] Update: Ziel 5.00 MSPS -> Real 5.0000 MSPS (Cycles: 25 [6/13/6])
 [DATA] Client verbunden!
 ```
-Because the secondary memory interface is DMA-driven, the CPUs remain practically idle even at higher RF data rates via ADC/DAC. This allows - similar to the Red Pitaya - the installation of custom SDR applications on the "smisdr" device to, for example, filter, resample or frequency-shift the incoming data stream using software NCOs. An option for a digital up- and down-converter directly within low-cost FPGA HATs, such as the Lattice IceBoard, is being considered. This allows I/Q samples to be transmitted directly via the SMI bus; thanks to the FPGA's more powerful NCOs, these samples can then be shifted across a much wider frequency range. This benefits smaller smiSDR systems that are not based on the Raspberry Pi 4.
+Because the secondary memory interface is DMA-driven, the CPUs remain practically idle even at higher RF data rates via ADC/DAC. This allows - similar to the Red Pitaya - the installation of custom SDR applications on the "smisdr" device to, for example, filter, resample or frequency-shift the incoming data stream using software NCOs. An option for a digital up- and down-converter directly within low-cost FPGA HATs you will find in the gateware folder. This allows I/Q samples to be transmitted directly via the SMI bus; thanks to the FPGA's more powerful NCOs, these samples can then be shifted across a much wider frequency range. This benefits smaller smiSDR systems that are not based on the Raspberry Pi 4.
 
 ![htop](https://github.com/radiolab81/smisdr/blob/main/www/htop.jpg)*htop on rpi4 while streaming RF over GigabitEthernet to SMIDAC*
 
