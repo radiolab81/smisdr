@@ -7,7 +7,7 @@ This module provides two C++ blocks — `smisdr.encoder` and `smisdr.decoder`
 — that translate between a normal complex I/Q stream in GNU Radio and the
 raw 16-bit protocol word stream consumed/produced by the smiSDR FPGA core
 described in [`gateware/README.md`](../README.md) and implemented in
-[`gateware/smi_rx_16bit.v`](../smi_rx_16bit.v). They let you drive the FPGA
+[`gateware/smi_rx_16bit.v`](https://github.com/radiolab81/smisdr/blob/main/gateware/DUC/smi_rx_16bit.v). They let you drive the FPGA
 DUC/DDC path — including live sample-rate and NCO-shift reconfiguration —
 directly from a GNU Radio flowgraph, over a File Sink/Source or a TCP
 socket, with no additional glue code required on the host side.
