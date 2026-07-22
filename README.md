@@ -201,3 +201,40 @@ Then restart your pi. The Raspberry Pi should be connected directly to the USB p
 
 For an SD card image of an already installed smisdrOS see release.
 
+
+## Using with GNU Radio
+
+smisdr talks to the outside world over two independent, plain TCP sockets — there is no proprietary framing to deal with, which makes it trivial to drive from GNU Radio.
+
+| Port | Direction | Content |
+|---|---|---|
+| **1234** | data | Raw, pre-computed RF/baseband samples, 8-bit or 16-bit, sent straight through as a byte stream. `smi_tcp_streaming_dac` just forwards whatever arrives to the SMI/DAC bus at the currently configured rate and bit width. |
+| **5000** | control | Plain ASCII text commands (`rate <MSPS>`, `width 8`, `width 16`) sent over short-lived connections, one command per connection, then the socket is closed again. |
+
+Because port 1234 expects nothing but finished samples, any flowgraph that ends in a **TCP Sink** connected to smisdr's IP on port 1234 will stream. For 8-bit widths, convert your samples to `byte`/`unsigned char` before the sink; for 16-bit widths, convert to `short`. No GNU Radio-side smisdr blocks are required for this base package — it's just I/O.
+
+The control port is the part that isn't obvious from the data path alone, so here's how a companion flowgraph typically drives it:
+
+### Control flowgraph pattern
+
+1. **Rate control (`rate <MSPS>`)**
+   A GNU Radio variable (e.g. a `QT GUI Range` bound to `samp_rate`) is fed into a `Variable to Message` block. This block only fires a message when the variable's value actually *changes* at runtime — it is not a timer — so a small Python block can open a short TCP connection to port 5000 and send `rate <value>` (scaled from Hz to MSPS) exactly when the user moves the slider. On flowgraph start, a **Python Snippet** (`Section: Main - After Start`) sends the current rate once, so the device and the GUI start in sync without needing a timer or a repeated send.
+
+2. **Width control (`width 8` / `width 16`)**
+   Two `QT GUI Message Push Buttons` each publish a `pressed` message when clicked. Each is wired to its own small Python message-sink block that ignores the message content — the arrival of *any* message is the trigger — and simply opens a short TCP connection to port 5000 and sends a fixed command (`width 8` or `width 16`).
+
+3. **Connection handling**
+   Every command uses its own brief connection (open → send → close), matching the way the daemon expects control input (equivalent to `echo -n "rate 5" | nc -w1 <ip> <port>`). Connection errors are caught so a temporarily unreachable device doesn't crash the flowgraph — it just logs and continues.
+
+None of this needs a custom OOT block; it's ~30 lines of Python per command type using the standard library `socket` module, wired up with GNU Radio's message-passing blocks (`Variable to Message`, `QT GUI Message Push Button`, `Message Debug`, or a custom `Embedded Python Block`).
+
+An example (`smisdr_control.grc`) implementing exactly this pattern — sample-rate slider with change-only updates, an initial rate push on start, and two width buttons — can be found in `/grc/`.
+
+### Extension package: in-band signaling with `gr-smisdr`
+
+The control-socket pattern above applies to the **base package**, where the FPGA/DAC only ever sees finished RF samples and rate/width changes go over the separate port-5000 control channel.
+
+The **extension package** (FPGA DUC/DDC gateware) instead multiplexes rate and NCO-shift commands *in-band*, inside the 16-bit sample stream itself, using the `smisdr.encoder`/`smisdr.decoder` GNU Radio OOT blocks documented in [`gateware/gr-smisdr/README.md`](gateware/gr-smisdr/README.md). If you're working with the DUC/DDC-capable hardware, use those blocks (and their `cmd` message ports / `set_shift()` / `set_sample_rate()` calls). 
+Because sending I/Q interleaved samples doubles data rate on smi bus, its importent to double the sample rate for smi configuration on port 5000 too!
+
+
