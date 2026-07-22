@@ -1,0 +1,329 @@
+options:
+  parameters:
+    author: ''
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: Steuert smisdr (rate/width) ueber TCP Port 5000
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: '.:'
+    id: smisdr_control
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: prompt
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: smisdr Control
+    window_size: (1000,600)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: ctrl_port
+  id: variable
+  parameters:
+    comment: Steuerport von smi_tcp_streaming_dac
+    value: '5000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [472, 16.0]
+    rotation: 0
+    state: enabled
+- name: ip_addr
+  id: variable
+  parameters:
+    comment: IP-Adresse des smisdr Geraets
+    value: '''192.168.1.129'''
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [280, 16.0]
+    rotation: 0
+    state: enabled
+- name: rate_scale
+  id: variable
+  parameters:
+    comment: Skalierungsfaktor Hz -> Kommandowert, ggf. anpassen!
+    value: '1000000.0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [696, 16.0]
+    rotation: 0
+    state: enabled
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: Ziel-Samplerate in Hz, z.B. 1250000 -> "rate 1.25"
+    value: variable_qtgui_range_0
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 120.0]
+    rotation: 0
+    state: enabled
+- name: variable_qtgui_range_0
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: Samplerate Demo
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '250000'
+    step: '100000'
+    stop: '2500000'
+    value: '250000'
+    widget: eng_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [280, 120.0]
+    rotation: 0
+    state: enabled
+- name: btn_width_16
+  id: variable_qtgui_msg_push_button
+  parameters:
+    comment: ''
+    gui_hint: 1,1,1,1
+    label: Width 16 Bit
+    msgName: pressed
+    relBackgroundColor: default
+    relFontColor: default
+    type: int
+    value: '16'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [560, 408.0]
+    rotation: 0
+    state: enabled
+- name: btn_width_8
+  id: variable_qtgui_msg_push_button
+  parameters:
+    comment: ''
+    gui_hint: 1,0,1,1
+    label: Width 8 Bit
+    msgName: pressed
+    relBackgroundColor: default
+    relFontColor: default
+    type: int
+    value: '8'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [560, 272.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_rate_sender
+  id: epy_block
+  parameters:
+    _source_code: "import socket\nimport pmt\nfrom gnuradio import gr\n\n\nclass blk(gr.basic_block):\n\
+      \    \"\"\"Sendet \"rate X\" per kurzlebiger TCP-Verbindung an smisdr -\n  \
+      \  aequivalent zu 'echo -n \"rate X\" | nc -w1 <ip> <port>'.\n\n    Wird auf\
+      \ zwei Wegen ausgeloest:\n    - handle_msg(): reagiert auf (key . zahlenwert)-Paare\
+      \ von \"Variable to Message\"\n    - send_now(value): oeffentliche Methode fuer\
+      \ den einmaligen Aufruf\n      direkt nach dem Start des Flowgraphen (siehe\
+      \ Python-Snippet-Block)\n\n    Jede Nachricht/jeder Aufruf oeffnet eine EIGENE\
+      \ Verbindung und schliesst\n    sie danach wieder. Verbindungsfehler werden\
+      \ abgefangen, statt den\n    gesamten Flowgraph zum Absturz zu bringen. Es gibt\
+      \ hier KEINEN Timer -\n    ohne externen Trigger passiert nichts.\"\"\"\n\n\
+      \    def __init__(self, ip='192.168.1.135', port=5000, scale=100000.0, timeout=1.0):\n\
+      \        gr.basic_block.__init__(\n            self,\n            name='rate_cmd_sender',\n\
+      \            in_sig=None,\n            out_sig=None\n        )\n        self.ip\
+      \ = ip\n        self.port = int(port)\n        self.scale = scale\n        self.timeout\
+      \ = timeout\n        self.message_port_register_in(pmt.intern('msg_in'))\n \
+      \       self.set_msg_handler(pmt.intern('msg_in'), self.handle_msg)\n\n    def\
+      \ handle_msg(self, msg):\n        if not pmt.is_pair(msg):\n            return\n\
+      \        value = pmt.to_double(pmt.cdr(msg))\n        self.send_now(value)\n\
+      \n    def send_now(self, value):\n        scaled = value / self.scale\n    \
+      \    # \"{:g}\" vermeidet unnoetige Nachkommastellen (1.25 statt 1.250000)\n\
+      \        cmd = \"rate {:g}\".format(scaled)\n        self._send(cmd)\n\n   \
+      \ def _send(self, cmd):\n        try:\n            with socket.create_connection((self.ip,\
+      \ self.port), timeout=self.timeout) as s:\n                s.sendall(cmd.encode('ascii'))\n\
+      \        except OSError as e:\n            print(\"[smisdr] Senden fehlgeschlagen\
+      \ ({!r}): {}\".format(cmd, e))\n\n    def set_ip(self, ip):\n        self.ip\
+      \ = ip\n\n    def set_port(self, port):\n        self.port = int(port)\n\n \
+      \   def set_scale(self, scale):\n        self.scale = scale"
+    affinity: ''
+    alias: ''
+    comment: Sendet "rate X" - kein interner Timer, nur externe Trigger
+    ip: ip_addr
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    port: ctrl_port
+    scale: rate_scale
+    timeout: '1.0'
+  states:
+    _io_cache: '(''rate_cmd_sender'', ''blk'', [(''ip'', "''192.168.1.135''"), (''port'',
+      ''5000''), (''scale'', ''100000.0''), (''timeout'', ''1.0'')], [(''msg_in'',
+      ''message'', 1)], [], ''Sendet "rate X" per kurzlebiger TCP-Verbindung an smisdr
+      -\naequivalent zu \''echo -n "rate X" | nc -w1 <ip> <port>\''.\n\nWird auf zwei
+      Wegen ausgeloest:\n- handle_msg(): reagiert auf (key . zahlenwert)-Paare von
+      "Variable to Message"\n- send_now(value): oeffentliche Methode fuer den einmaligen
+      Aufruf\n  direkt nach dem Start des Flowgraphen (siehe Python-Snippet-Block)\n\nJede
+      Nachricht/jeder Aufruf oeffnet eine EIGENE Verbindung und schliesst\nsie danach
+      wieder. Verbindungsfehler werden abgefangen, statt den\ngesamten Flowgraph zum
+      Absturz zu bringen. Es gibt hier KEINEN Timer -\nohne externen Trigger passiert
+      nichts.'', [''ip'', ''port'', ''scale'', ''timeout''])'
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [400, 448.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_width16_sender
+  id: epy_block
+  parameters:
+    _source_code: "import socket\nimport pmt\nfrom gnuradio import gr\n\n\nclass blk(gr.basic_block):\n\
+      \    \"\"\"Sendet bei JEDER eingehenden Trigger-Nachricht einen fest\n    konfigurierten\
+      \ ASCII-Befehl per kurzlebiger TCP-Verbindung an smisdr.\n    Der Inhalt der\
+      \ eingehenden Nachricht wird bewusst NICHT ausgewertet -\n    das Eintreffen\
+      \ selbst ist der Trigger. Das macht den Block unabhaengig\n    davon, welchen\
+      \ genauen PMT-Typ der ausloesende Button verwendet.\"\"\"\n\n    def __init__(self,\
+      \ command='width 16', ip='192.168.1.135', port=5000, timeout=1.0):\n       \
+      \ gr.basic_block.__init__(\n            self,\n            name='cmd_sender',\n\
+      \            in_sig=None,\n            out_sig=None\n        )\n        self.command\
+      \ = command\n        self.ip = ip\n        self.port = int(port)\n        self.timeout\
+      \ = timeout\n        self.message_port_register_in(pmt.intern('trigger'))\n\
+      \        self.set_msg_handler(pmt.intern('trigger'), self.handle_msg)\n\n  \
+      \  def handle_msg(self, msg):\n        self._send(self.command)\n\n    def _send(self,\
+      \ cmd):\n        try:\n            with socket.create_connection((self.ip, self.port),\
+      \ timeout=self.timeout) as s:\n                s.sendall(cmd.encode('ascii'))\n\
+      \        except OSError as e:\n            print(\"[smisdr] Senden fehlgeschlagen\
+      \ ({!r}): {}\".format(cmd, e))\n\n    def set_ip(self, ip):\n        self.ip\
+      \ = ip\n\n    def set_port(self, port):\n        self.port = int(port)\n\n \
+      \   def set_command(self, command):\n        self.command = command"
+    affinity: ''
+    alias: ''
+    command: '''width 16'''
+    comment: ''
+    ip: ip_addr
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    port: ctrl_port
+    timeout: '1.0'
+  states:
+    _io_cache: ('cmd_sender', 'blk', [('command', "'width 16'"), ('ip', "'192.168.1.135'"),
+      ('port', '5000'), ('timeout', '1.0')], [('trigger', 'message', 1)], [], 'Sendet
+      bei JEDER eingehenden Trigger-Nachricht einen fest\nkonfigurierten ASCII-Befehl
+      per kurzlebiger TCP-Verbindung an smisdr.\nDer Inhalt der eingehenden Nachricht
+      wird bewusst NICHT ausgewertet -\ndas Eintreffen selbst ist der Trigger. Das
+      macht den Block unabhaengig\ndavon, welchen genauen PMT-Typ der ausloesende
+      Button verwendet.', ['command', 'ip', 'port', 'timeout'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [856, 408.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_width8_sender
+  id: epy_block
+  parameters:
+    _source_code: "import socket\nimport pmt\nfrom gnuradio import gr\n\n\nclass blk(gr.basic_block):\n\
+      \    \"\"\"Sendet bei JEDER eingehenden Trigger-Nachricht einen fest\n    konfigurierten\
+      \ ASCII-Befehl per kurzlebiger TCP-Verbindung an smisdr.\n    Der Inhalt der\
+      \ eingehenden Nachricht wird bewusst NICHT ausgewertet -\n    das Eintreffen\
+      \ selbst ist der Trigger. Das macht den Block unabhaengig\n    davon, welchen\
+      \ genauen PMT-Typ der ausloesende Button verwendet.\"\"\"\n\n    def __init__(self,\
+      \ command='width 8', ip='192.168.1.135', port=5000, timeout=1.0):\n        gr.basic_block.__init__(\n\
+      \            self,\n            name='cmd_sender',\n            in_sig=None,\n\
+      \            out_sig=None\n        )\n        self.command = command\n     \
+      \   self.ip = ip\n        self.port = int(port)\n        self.timeout = timeout\n\
+      \        self.message_port_register_in(pmt.intern('trigger'))\n        self.set_msg_handler(pmt.intern('trigger'),\
+      \ self.handle_msg)\n\n    def handle_msg(self, msg):\n        self._send(self.command)\n\
+      \n    def _send(self, cmd):\n        try:\n            with socket.create_connection((self.ip,\
+      \ self.port), timeout=self.timeout) as s:\n                s.sendall(cmd.encode('ascii'))\n\
+      \        except OSError as e:\n            print(\"[smisdr] Senden fehlgeschlagen\
+      \ ({!r}): {}\".format(cmd, e))\n\n    def set_ip(self, ip):\n        self.ip\
+      \ = ip\n\n    def set_port(self, port):\n        self.port = int(port)\n\n \
+      \   def set_command(self, command):\n        self.command = command"
+    affinity: ''
+    alias: ''
+    command: '''width 8'''
+    comment: ''
+    ip: ip_addr
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    port: ctrl_port
+    timeout: '1.0'
+  states:
+    _io_cache: ('cmd_sender', 'blk', [('command', "'width 8'"), ('ip', "'192.168.1.135'"),
+      ('port', '5000'), ('timeout', '1.0')], [('trigger', 'message', 1)], [], 'Sendet
+      bei JEDER eingehenden Trigger-Nachricht einen fest\nkonfigurierten ASCII-Befehl
+      per kurzlebiger TCP-Verbindung an smisdr.\nDer Inhalt der eingehenden Nachricht
+      wird bewusst NICHT ausgewertet -\ndas Eintreffen selbst ist der Trigger. Das
+      macht den Block unabhaengig\ndavon, welchen genauen PMT-Typ der ausloesende
+      Button verwendet.', ['command', 'ip', 'port', 'timeout'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [856, 272.0]
+    rotation: 0
+    state: enabled
+- name: samp_rate_to_msg
+  id: blocks_var_to_msg
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Feuert NUR bei tatsaechlicher Aenderung von samp_rate zur Laufzeit (kein
+      Timer)
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    msgname: rate
+    target: samp_rate
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [24, 296.0]
+    rotation: 0
+    state: enabled
+- name: send_initial_rate
+  id: snippet
+  parameters:
+    alias: ''
+    code: self.epy_block_rate_sender.send_now(self.samp_rate)
+    comment: Sendet die aktuelle Samplerate GENAU EINMAL, direkt nachdem der Flowgraph
+      gestartet wurde. Kein Timer, keine Wiederholung.
+    priority: '0'
+    section: main_after_start
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [24, 552.0]
+    rotation: 0
+    state: enabled
+
+connections:
+- [btn_width_16, pressed, epy_block_width16_sender, trigger]
+- [btn_width_8, pressed, epy_block_width8_sender, trigger]
+- [samp_rate_to_msg, msgout, epy_block_rate_sender, msg_in]
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.12.0
