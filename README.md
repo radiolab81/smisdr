@@ -236,7 +236,7 @@ An example (`smisdr_control.grc`) implementing exactly this pattern — sample-r
 
 The control-socket pattern above applies to the **base package**, where the FPGA/DAC only ever sees finished RF samples and rate/width changes go over the separate port-5000 control channel.
 
-The **extension package** (FPGA DUC/DDC gateware) instead multiplexes rate and NCO-shift commands *in-band*, inside the 16-bit sample stream itself, using the `smisdr.encoder`/`smisdr.decoder` GNU Radio OOT blocks documented in [`gateware/gr-smisdr/README.md`](gateware/gr-smisdr/README.md). If you're working with the DUC/DDC-capable hardware, use those blocks (and their `cmd` message ports / `set_shift()` / `set_sample_rate()` calls). 
-Because sending I/Q interleaved samples doubles data rate on smi bus, its importent to double the sample rate for smi configuration on port 5000 too!
+The **extension package** (FPGA DUC/DDC gateware) multiplexes rate and NCO-shift commands *in-band*, inside the 16-bit sample stream itself, using the `smisdr.encoder`/`smisdr.decoder` GNU Radio OOT blocks documented in [`gateware/gr-smisdr/README.md`](gateware/gr-smisdr/README.md). If you're working with the DUC/DDC-capable hardware, use those blocks (and their `cmd` message ports / `set_shift()` / `set_sample_rate()` calls). 
+Because sending I/Q interleaved samples doubles data rate on smi bus, its importent to double the sample rate for smi configuration on port 5000 (2x rate of i/q baseband file)!
 
 
