@@ -230,6 +230,8 @@ None of this needs a custom OOT block; it's ~30 lines of Python per command type
 
 An example (`smisdr_control.grc`) implementing exactly this pattern — sample-rate slider with change-only updates, an initial rate push on start, and two width buttons — can be found in `/grc/`.
 
+![grc_ex](https://github.com/radiolab81/smisdr/blob/main/www/grc_control_smisdr.png)
+
 ### Extension package: in-band signaling with `gr-smisdr`
 
 The control-socket pattern above applies to the **base package**, where the FPGA/DAC only ever sees finished RF samples and rate/width changes go over the separate port-5000 control channel.
