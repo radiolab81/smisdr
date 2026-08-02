@@ -146,11 +146,17 @@ void *control_thread(void *arg) {
         read(client, cmd, sizeof(cmd)-1);
 
         if (strncmp(cmd, "rate ", 5) == 0) {
-            cur_rate = atof(cmd + 5);
-            update_smi_settings(cur_rate, cur_width);
+            float val = atof(cmd + 5);
+            if (val > 0.1f && val <= 40.0f) { // Plausibilitätsprüfung!
+                cur_rate = val;
+                update_smi_settings(cur_rate, cur_width);
+            }
         } else if (strncmp(cmd, "width ", 6) == 0) {
-            cur_width = atoi(cmd + 6);
-            update_smi_settings(cur_rate, cur_width);
+            int w = atoi(cmd + 6);
+            if (w == 8 || w == 16) {
+                cur_width = w;
+                update_smi_settings(cur_rate, cur_width);
+            }
         }
         close(client);
     }
