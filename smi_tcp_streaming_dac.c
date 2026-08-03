@@ -54,16 +54,33 @@ target-rate	cycles (total)	real-rate	error
 #define CTRL_PORT 5000
 #define BUFFER_SIZE (4 * 1024 * 1024)
 
-uint8_t *buffer_a, *buffer_b, *active_buffer;
-int buffer_ready = 0, smi_fd;
-int buf_a_busy = 0, buf_b_busy = 0;
+// --- Doppelpuffer für Port 1234 -------------------------------------------
+// Statt einer einzelnen active_buffer/buffer_ready-Variable (die bei
+// schnellem Timing überschrieben werden konnte) verwenden wir eine echte
+// Zwei-Slot-FIFO-Queue. Damit kann ein fertiger Puffer niemals verloren
+// gehen, egal wie das Timing zwischen Netzwerk-Thread und Main-Thread
+// ausfällt.
+#define NUM_BUFFERS 2
+
+uint8_t *buffer_a, *buffer_b;
+uint8_t *buffers[NUM_BUFFERS];      // Index 0 = buffer_a, Index 1 = buffer_b
+int buf_busy[NUM_BUFFERS] = {0, 0}; // 1 = Puffer befindet sich gerade in der
+                                     // Pipeline (wird gefüllt / wartet in der
+                                     // Queue / wird per SMI geschrieben) und
+                                     // darf vom Netzwerk-Thread NICHT
+                                     // überschrieben werden.
+
+int ready_queue[NUM_BUFFERS];  // FIFO der fertig gefüllten Pufferindizes
+int queue_head = 0, queue_tail = 0, queue_count = 0;
+
+int smi_fd;
 
 volatile sig_atomic_t stop = 0;
 int sig_count = 0;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond_free = PTHREAD_COND_INITIALIZER; // Signal für "Puffer frei"
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;      // Signal für "Puffer in Queue"
 
 
 // Hilfsfunktion: Core-Frequenz messen
@@ -80,7 +97,7 @@ long get_core_freq() {
 
 // Zentrale Funktion zum Setzen der SMI-Hardware
 void update_smi_settings(float msps, int width) {
-    struct smi_settings settings;
+    struct smi_settings settings = {0};
 
     long core_f = get_core_freq();
     printf("core_f=%ld\n",core_f);
@@ -163,6 +180,35 @@ void *control_thread(void *arg) {
     return NULL;
 }
 
+// --- Queue-Hilfsfunktionen (nur für Port-1234-Pipeline) --------------------
+// Müssen unter Haltung von 'mutex' aufgerufen werden.
+
+// Fertig gefüllten Puffer in die Queue einreihen und Main-Thread wecken.
+static void queue_push_locked(int idx) {
+    ready_queue[queue_tail] = idx;
+    queue_tail = (queue_tail + 1) % NUM_BUFFERS;
+    queue_count++;
+    pthread_cond_signal(&cond);
+}
+
+// Beim Disconnect: alle noch NICHT von main() abgeholten Queue-Einträge
+// verwerfen und deren busy-Flag wieder freigeben. Ein Puffer, den main()
+// bereits aus der Queue entnommen hat (und der evtl. gerade per SMI-DMA
+// geschrieben wird), steht NICHT mehr in der Queue und wird hier deshalb
+// nicht angefasst -- das verhindert genau die Race Condition, bei der ein
+// neu verbundener Client in einen noch aktiven DMA-Puffer schreibt.
+static void queue_discard_pending_locked(void) {
+    while (queue_count > 0) {
+        int idx = ready_queue[queue_head];
+        queue_head = (queue_head + 1) % NUM_BUFFERS;
+        queue_count--;
+        buf_busy[idx] = 0;
+    }
+    // Für den nächsten Client wieder bei Index 0 (buffer_a) beginnen.
+    queue_head = 0;
+    queue_tail = 0;
+}
+
 // Thread: Data Port 1234 (Stream)
 void *network_thread(void *arg) {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -194,45 +240,55 @@ void *network_thread(void *arg) {
         int rcvbuf = 2 * 1024 * 1024; // 2MB Kernel-Empfangspuffer
         setsockopt(client_fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
 
-        uint8_t *fill_ptr = buffer_a;
+        int fill_idx = 0; // immer mit buffer_a (Index 0) beginnen
         while (!stop) {
 
-            // 1. WARTEN: Ist der Puffer, den ich füllen will, noch beim SMI-Treiber?
+            // 1. WARTEN: Ist der Puffer, den ich füllen will, noch in Benutzung
+            //    (in der Queue, oder gerade per SMI-DMA am Schreiben)?
+            //    Solange TCP hier blockiert, entsteht ganz natürlich die
+            //    gewünschte Backpressure Richtung GNU Radio.
             pthread_mutex_lock(&mutex);
-            while ((fill_ptr == buffer_a && buf_a_busy) || (fill_ptr == buffer_b && buf_b_busy)) {
+            while (buf_busy[fill_idx] && !stop) {
                 pthread_cond_wait(&cond_free, &mutex);
             }
+            if (stop) { pthread_mutex_unlock(&mutex); goto disconnect; }
+            // Puffer ab sofort für Netzwerk-Thread reserviert.
+            buf_busy[fill_idx] = 1;
             pthread_mutex_unlock(&mutex);
 
-            // 2. FÜLLEN: Daten vom Netzwerk lesen
+            // 2. FÜLLEN: Daten vom Netzwerk lesen (kein anderer Thread
+            //    greift auf diesen Puffer zu, solange busy[fill_idx]==1
+            //    und er noch nicht in der Queue steht -> unkritisch ohne Lock).
+            uint8_t *fill_ptr = buffers[fill_idx];
             size_t rx = 0;
             while (rx < BUFFER_SIZE) {
                 ssize_t n = read(client_fd, fill_ptr + rx, BUFFER_SIZE - rx);
                 if (n <= 0) {
                     printf("[DATA] Client getrennt.\n");
+                    // Unvollständig gefüllten Puffer nicht in die Queue
+                    // einreihen, sondern busy-Flag sofort wieder freigeben.
+                    pthread_mutex_lock(&mutex);
+                    buf_busy[fill_idx] = 0;
+                    pthread_mutex_unlock(&mutex);
                     goto disconnect;
                 }
                 rx += n;
             }
 
-            // 3. SIGNAL: Puffer voll, dem Main-Thread bescheid geben
+            // 3. SIGNAL: Puffer fertig -> in Queue einreihen, Main-Thread weckt auf.
             pthread_mutex_lock(&mutex);
-            active_buffer = fill_ptr;
-
-            if (fill_ptr == buffer_a) buf_a_busy = 1; else buf_b_busy = 1;
-            buffer_ready = 1;
-            pthread_cond_signal(&cond);
-
-            // Puffer für den nächsten Durchlauf wechseln
-            fill_ptr = (fill_ptr == buffer_a) ? buffer_b : buffer_a;
+            queue_push_locked(fill_idx);
             pthread_mutex_unlock(&mutex);
+
+            // Für den nächsten Durchlauf zum anderen Puffer wechseln.
+            fill_idx = (fill_idx + 1) % NUM_BUFFERS;
         }
         disconnect: close(client_fd);
-        // Nach Disconnect: Beide Puffer als frei markieren für neuen Versuch
+        // Nach Disconnect: nur die Puffer freigeben, die NICHT gerade beim
+        // Main-Thread (SMI-Schreibvorgang) in Arbeit sind. Dadurch wird
+        // niemals in einen laufenden DMA-Puffer hineingeschrieben.
         pthread_mutex_lock(&mutex);
-        buf_a_busy = 0;
-        buf_b_busy = 0;
-        buffer_ready = 0;
+        queue_discard_pending_locked();
         pthread_mutex_unlock(&mutex);
     }
     return NULL;
@@ -271,6 +327,8 @@ int main() {
         close(smi_fd);
         return 1;
     }
+    buffers[0] = buffer_a;
+    buffers[1] = buffer_b;
 
     update_smi_settings(5, 16); // startup default 5 MSPS / 16 bit mode
 
@@ -280,14 +338,18 @@ int main() {
 
     while (!stop) {
         pthread_mutex_lock(&mutex);
-        while (!buffer_ready) pthread_cond_wait(&cond, &mutex);
-        uint8_t *data = active_buffer; buffer_ready = 0;
+        while (queue_count == 0 && !stop) pthread_cond_wait(&cond, &mutex);
+        if (stop && queue_count == 0) { pthread_mutex_unlock(&mutex); break; }
+
+        int idx = ready_queue[queue_head];
+        queue_head = (queue_head + 1) % NUM_BUFFERS;
+        queue_count--;
         pthread_mutex_unlock(&mutex);
 
-        write(smi_fd, data, BUFFER_SIZE);
+        write(smi_fd, buffers[idx], BUFFER_SIZE);
 
         pthread_mutex_lock(&mutex);
-        if (data == buffer_a) buf_a_busy = 0; else buf_b_busy = 0;
+        buf_busy[idx] = 0;
         pthread_cond_signal(&cond_free); // Wecke Netzwerk-Thread
         pthread_mutex_unlock(&mutex);
     }
