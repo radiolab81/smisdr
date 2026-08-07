@@ -101,7 +101,11 @@ The pin assignment of the header to the DAC (or ADC) is shown in the following d
  * Hinweis:
  * Die GPIOs müssen ggf. auf die Alternate Function 1 'SMI' gesetzt werden.
  * Das 'smi-dev' Overlay übernimmt dies normalerweise beim Booten automatisch.
+ * Analog zu SWE (GPIO 7 / Pin 26) auf der Senderseite nutzt der ADC-Betrieb
+ * das SMI-eigene OE/Read-Strobe-Signal, das vom Treiber automatisch über
+ * dieselbe Alternate-Function-1-Konfiguration bereitgestellt wird. 
  */
+
 ```
 By setting the core_freq
 to 250 MHz in the config.txt, the following clock rates result, with which a DAC / ADC can work very well.
