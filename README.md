@@ -126,7 +126,7 @@ target-rate	cycles (total)	real-rate	error
 - `smi_tcp_streaming_dac.c`: Main tool for (TX) streaming baseband or RF data, receives data on port 1234 from external computers/apps such as GNU Radio or from localhost with internal apps, can be build by `build_smi_tcp_streamig_dac.sh`
 - `smi_udp_streaming_adc.c`: Main tool for (RX) streaming baseband or RF data, sends data on port 1233 to external computers/apps such as GNU Radio, can be build by `build_smi_udp_streamig_adc.sh`
 
-  Similar to a Red Pitaya, the streaming tools receives commands on port 5000 for on-the-fly adjustment of the sample rate and bus width (8/16 bits).
+  Similar to a Red Pitaya, the streaming tools receive commands on port 5000 for on-the-fly adjustment of the sample rate and bus width (8/16 bits).
 
 for example:
 
@@ -139,10 +139,10 @@ echo -n "rate 10" | nc -w 1 192.168.1.135 5000
 #### set sample rate to 12.5 MSPS
 echo -n "rate 12.5" | nc -w 1 192.168.1.135 5000
 
-#### set 8 bit dac width
+#### set 8 bit adc/dac width
 echo -n "width 8" | nc -w 1 192.168.1.135 5000
 
-#### set 16 bit dac width
+#### set 16 bit adc/dac width
 echo -n "width 16" | nc -w 1 192.168.1.135 5000
 
 #### set UDP destination IP and port for RX streaming
