@@ -211,17 +211,22 @@ Then restart your pi. The Raspberry Pi should be connected directly to the USB p
 
 For an SD card image of an already installed smisdrOS see release.
 
-
 ## Using with GNU Radio
 
-smisdr talks to the outside world over two independent, plain TCP sockets — there is no proprietary framing to deal with, which makes it trivial to drive from GNU Radio.
+smisdr talks to the outside world over two independent data channels and a separate control socket — there is no proprietary framing to deal with, which makes it trivial to drive from GNU Radio.
 
-| Port | Direction | Content |
-|---|---|---|
-| **1234** | data | Raw, pre-computed RF/baseband samples, 8-bit or 16-bit, sent straight through as a byte stream. `smi_tcp_streaming_dac` just forwards whatever arrives to the SMI/DAC bus at the currently configured rate and bit width. |
-| **5000** | control | Plain ASCII text commands (`rate <MSPS>`, `width 8`, `width 16`) sent over short-lived connections, one command per connection, then the socket is closed again. |
+| Port | Protocol | Direction | Content |
+|---|---|---|---|
+| **1234** | TCP | Host -> smisdr (TX) | Raw, pre-computed RF/baseband samples (8-bit or 16-bit), sent straight through as a byte stream. `smi_tcp_streaming_dac` forwards whatever arrives directly to the SMI/DAC bus at the configured rate and bit width. |
+| **1233** | UDP | smisdr -> Host (RX) | Raw ADC samples (8-bit or 16-bit) streamed by `smi_udp_streaming_adc` directly to the target IP and port configured via control commands. |
+| **5000** | TCP | Control | Plain ASCII text commands (`rate <MSPS>`, `width 8` / `width 16`, `dest <IP> <port>`, `recalib`) sent over short-lived connections, one command per connection, then the socket is closed again. |
 
-Because port 1234 expects nothing but finished samples, any flowgraph that ends in a **TCP Sink** connected to smisdr's IP on port 1234 will stream. For 8-bit widths, convert your samples to `byte`/`unsigned char` before the sink; for 16-bit widths, convert to `short`. No GNU Radio-side smisdr blocks are required for this base package — it's just I/O.
+### Data Paths in GNU Radio
+
+* **Transmit Path (TX / DAC):** Any flowgraph generating transmit samples ends in a **TCP Sink** connected to smisdr's IP on port 1234. For 8-bit widths, convert your samples to `byte`/`unsigned char` before the sink; for 16-bit widths, convert to `short`.
+* **Receive Path (RX / ADC):** Any flowgraph receiving RF data starts with a **UDP Source** bound to port 1233 (or the target port set via the `dest` command). Incoming data arrives as raw samples (`byte` for 8-bit, `short` for 16-bit) and can be cast directly into float or complex I/Q streams for further processing.
+
+No custom GNU Radio-side smisdr blocks are required for basic I/O — it's plain socket communication.
 
 The control port is the part that isn't obvious from the data path alone, so here's how a companion flowgraph typically drives it:
 
