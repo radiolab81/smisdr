@@ -123,9 +123,10 @@ target-rate	cycles (total)	real-rate	error
 - `smi_sinus.c`: Tool for generating and outputting a sine waveform at a specific data rate, can be build by `build_smi_sinus.sh`
 - `tcp_test.py`: test tool for generating and outputting a sine waveform at a specific data rate via TCP/localhost to smi_tcp_streaming_dac process
 - `gateware`: HDL code for FPGA extensions such as hardware-accelerated I/Q processing, DUC, DDC, ...
-- `smi_tcp_streaming_dac.c`: Main tool for streaming baseband or RF data, receives data on port 1234 from external computers/apps such as GNU Radio or from localhost with internal apps, can be build by `build_smi_tcp_streamig_dac.sh`
+- `smi_tcp_streaming_dac.c`: Main tool for (TX) streaming baseband or RF data, receives data on port 1234 from external computers/apps such as GNU Radio or from localhost with internal apps, can be build by `build_smi_tcp_streamig_dac.sh`
+- `smi_udp_streaming_adc.c`: Main tool for (RX) streaming baseband or RF data, sends data on port 1233 to external computers/apps such as GNU Radio, can be build by `build_smi_udp_streamig_adc.sh`
 
-  Similar to a Red Pitaya, it receives commands on port 5000 for on-the-fly adjustment of the sample rate and bus width (8/16 bits).
+  Similar to a Red Pitaya, the streaming tools receives commands on port 5000 for on-the-fly adjustment of the sample rate and bus width (8/16 bits).
 
 for example:
 
