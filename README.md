@@ -247,6 +247,8 @@ An example (`smisdr_control.grc`) implementing exactly this pattern — sample-r
 
 ![grc_ex](https://github.com/radiolab81/smisdr/blob/main/www/grc_control_smisdr.png)
 
+![wbtxrx](https://github.com/radiolab81/smisdr/blob/main/www/smiSDRwbTXRX.png)
+
 ### Extension package: in-band signaling with `gr-smisdr`
 
 The control-socket pattern above applies to the **base package**, where the FPGA/DAC only ever sees finished RF samples and rate/width changes go over the separate port-5000 control channel.
