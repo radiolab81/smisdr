@@ -247,6 +247,7 @@ An example (`smisdr_control.grc`) implementing exactly this pattern — sample-r
 
 ![grc_ex](https://github.com/radiolab81/smisdr/blob/main/www/grc_control_smisdr.png)
 
+Pi4 <-> Pi4 test @ 25 MS
 ![wbtxrx](https://github.com/radiolab81/smisdr/blob/main/www/smiSDRwbTXRX.png)
 
 ### Extension package: in-band signaling with `gr-smisdr`
