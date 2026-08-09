@@ -8,8 +8,8 @@
  * SD3  : GPIO 11 (Pin 23) | SD11 : GPIO 19 (Pin 35)
  * SD4  : GPIO 12 (Pin 32) | SD12 : GPIO 20 (Pin 38)
  * SD5  : GPIO 13 (Pin 33) | SD13 : GPIO 21 (Pin 40)
- * SD6  : GPIO 14 (Pin  8) | SD14 : GPIO 24 (Pin 15)
- * SD7  : GPIO 15 (Pin 10) | SD15 : GPIO 25 (Pin 26)
+ * SD6  : GPIO 14 (Pin  8) | SD14 : GPIO 22 (Pin 15)
+ * SD7  : GPIO 15 (Pin 10) | SD15 : GPIO 23 (Pin 16)
  *
  * Steuer-Signale:
  * SWE  : GPIO 7  (Pin 26) - SMI Write Enable (Taktet die Daten in den DAC)
