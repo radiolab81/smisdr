@@ -18,8 +18,8 @@
  * SD3  : GPIO 11 (Pin 23) | SD11 : GPIO 19 (Pin 35)
  * SD4  : GPIO 12 (Pin 32) | SD12 : GPIO 20 (Pin 38)
  * SD5  : GPIO 13 (Pin 33) | SD13 : GPIO 21 (Pin 40)
- * SD6  : GPIO 14 (Pin  8) | SD14 : GPIO 22 (Pin 15)
- * SD7  : GPIO 15 (Pin 10) | SD15 : GPIO 23 (Pin 16)
+ * SD6  : GPIO 14 (Pin  8) | SD14 : GPIO 24 (Pin 15)
+ * SD7  : GPIO 15 (Pin 10) | SD15 : GPIO 25 (Pin 26)
  *
  * Hinweis SRE (SMI Read Enable):
  * Analog zu SWE (GPIO 7 / Pin 26) auf der Senderseite nutzt der ADC-Betrieb
@@ -65,6 +65,36 @@ target-rate	cycles (total)	real-rate	error
 
 #define DATA_PORT_RX  1233 // Alternative: 1235 - einfach hier anpassen -> 1234 ist für die Gegenrichtung (Aussenden von HF) angedacht.
 #define CTRL_PORT 5000
+
+// --- Sample-Paar-Swap (SMI-DMA-Packing) ---------------------------------
+#define SWAP_SAMPLE_PAIRS 1
+
+// Zuletzt erfolgreich angewendete Bitbreite. Default passend zum
+// Startup-Aufruf update_smi_settings(5, 16) in main(). Wird danach nur
+// noch von smi_thread selbst geschrieben (dort, wo pending_width
+// angewendet wird) - somit exklusiv genutzt, kein Mutex noetig.
+static int g_applied_width = 16;
+
+
+#if SWAP_SAMPLE_PAIRS
+// Vertauscht Paare von Sample-Einheiten (unit_size Byte gross) in-place:
+// [U0,U1,U2,U3,...] -> [U1,U0,U3,U2,...]. len MUSS ein ganzzahliges
+// Vielfaches von (2*unit_size) sein (BUFFER_SIZE = 64 KiB erfuellt das
+// fuer unit_size 1 und 2 problemlos).
+static inline void swap_sample_pairs(uint8_t *buf, size_t len, size_t unit_size) {
+    for (size_t i = 0; i + 2 * unit_size <= len; i += 2 * unit_size) {
+        for (size_t b = 0; b < unit_size; b++) {
+            uint8_t tmp = buf[i + b];
+            buf[i + b] = buf[i + unit_size + b];
+            buf[i + unit_size + b] = tmp;
+        }
+    }
+}
+
+
+#endif
+
+
 
 // WICHTIG (Diagnose Wasserfall-Aussetzer):
 // Mit 4 MiB im vgl. zum TX, entsprach EIN Akquise-/Sende-Zyklus bei 5 MSPS/8-Bit ca. 0,84s
@@ -507,6 +537,7 @@ void *smi_thread(void *arg) {
             pthread_mutex_unlock(&settings_mutex);
 
             update_smi_settings(rate, width);
+            g_applied_width = width; // nur von diesem Thread geschrieben/gelesen
 
             pthread_mutex_lock(&settings_mutex);
             settings_apply_seq++;
@@ -561,6 +592,19 @@ void *smi_thread(void *arg) {
             rx += n;
         }
         pthread_mutex_unlock(&smi_io_mutex);
+
+#if SWAP_SAMPLE_PAIRS
+        // Ausserhalb von smi_io_mutex (wird fuer den naechsten read() nicht
+        // mehr gebraucht) und noch vor mutex/Queue-Push, damit weder der
+        // naechste Akquise-Zyklus noch der Netzwerk-Thread unnoetig warten.
+        // unit_size = 1 Byte bei width=8, 2 Byte bei width=16 (siehe
+        // Kommentar oben) - NICHT immer 1 Byte, sonst werden bei width=16
+        // gueltige 16-Bit-Samples zerstoert.
+        if (!read_error && rx == BUFFER_SIZE) {
+            size_t unit_size = (g_applied_width == 16) ? 2 : 1;
+            swap_sample_pairs(ptr, BUFFER_SIZE, unit_size);
+        }
+#endif
 
         pthread_mutex_lock(&mutex);
         if (!read_error && rx == BUFFER_SIZE) {
