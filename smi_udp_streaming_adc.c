@@ -67,6 +67,21 @@ target-rate	cycles (total)	real-rate	error
 #define CTRL_PORT 5000
 
 // --- Sample-Paar-Swap (SMI-DMA-Packing) ---------------------------------
+// WICHTIG: Ob dieser Swap noetig ist, haengt vom SMI-Kernel-Treiber
+// (bcm2835-smi) ab, NICHT direkt von der Hardware. Laut Broadcom-Datenblatt
+// (Abschnitt 6, PXLDAT=1/WFORMAT=0, 16-Bit) sollten Samples eigentlich in
+// natuerlicher Reihenfolge im FIFO/Speicher liegen (kein Swap noetig) -
+// in unserem konkreten Setup (Kernel 6.12, /dev/smi via ioctl) wurde
+// jedoch empirisch verifiziert (GNU-Radio-Aufnahme + Rampen-Testmuster),
+// dass ein paarweiser Swap TATSAECHLICH noetig ist, um korrekte
+// Sample-Reihenfolge zu erhalten. Vermutlich ein Treiber-spezifisches
+// Packing-Verhalten, das vom rohen Hardware-Verhalten laut Datenblatt
+// abweicht.
+//
+// -> Bei Aenderung von Kernel-/Treiberversion, Pi-Modell oder Wechsel
+//    zwischen 8-/16-Bit-Modus IMMER neu verifizieren (z.B. Rampen-Testmuster
+//    senden und mit GNU Radio / Logikanalysator gegenpruefen), bevor man
+//    sich auf den aktuell hier gesetzten Wert verlaesst!
 #define SWAP_SAMPLE_PAIRS 1
 
 // Zuletzt erfolgreich angewendete Bitbreite. Default passend zum
