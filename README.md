@@ -122,6 +122,8 @@ target-rate	cycles (total)	real-rate	error
 ```
 #### A note on sample ordering (SWAP_SAMPLE_PAIRS)
 
+https://github.com/radiolab81/smisdr/blob/main/docs/references/SWAP_NOTES_EN.md
+
 Depending on your ADC/DAC bit width and the SMI kernel driver behaviour,
 consecutive 16-bit (or 8-bit) samples may arrive/leave **pair-swapped**
 in memory due to how the SMI DMA engine packs data into 32-bit words
