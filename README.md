@@ -120,6 +120,22 @@ target-rate	cycles (total)	real-rate	error
 15.625 MSPS	  8	               15.6250 MSPS		0% (ok)
 25.0 MSPS	  5	               25.0000 MSPS		0% (ok) */
 ```
+#### A note on sample ordering (SWAP_SAMPLE_PAIRS)
+
+Depending on your ADC/DAC bit width and the SMI kernel driver behaviour,
+consecutive 16-bit (or 8-bit) samples may arrive/leave **pair-swapped**
+in memory due to how the SMI DMA engine packs data into 32-bit words
+(`pack_data`/`PXLDAT` bit). This is a driver/hardware packing detail, not
+something documented consistently across kernel versions — we verified
+it empirically on our setup (kernel 6.12, `/dev/smi`) by streaming a
+known ramp pattern and comparing it in GNU Radio.
+
+If every second sample pair looks swapped, toggle `SWAP_SAMPLE_PAIRS` (0/1) at the top of
+`smi_tcp_streaming_dac.c` / `smi_udp_streaming_adc.c` and re-test.
+
+This must be re-verified whenever you change: kernel/driver version,
+Raspberry Pi model, or switch between 8-bit and 16-bit mode — it is not
+guaranteed to behave identically in all cases. So choose the right settings for your ADC/DAC HAT!
 
 ### repo-structure
 - `README.md`: This file
