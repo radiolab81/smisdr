@@ -54,6 +54,48 @@ target-rate	cycles (total)	real-rate	error
 #define CTRL_PORT 5000
 #define BUFFER_SIZE (4 * 1024 * 1024)
 
+// --- Sample-Paar-Swap (SMI-DMA-Packing) ------------------------------------
+// WICHTIG: Analog zum RX-Pfad (smi_udp_streaming_adc.c) haengt es vom
+// SMI-Kernel-Treiber (bcm2835-smi) ab, ob dieser Swap noetig ist - NICHT
+// direkt von der Hardware-Spezifikation. Laut Broadcom-Datenblatt
+// (Abschnitt 6, PXLDAT=1/WFORMAT=0, 16-Bit) sollten Samples eigentlich in
+// natuerlicher Reihenfolge uebertragen werden. Ob das hier im TX-Pfad
+// (write() statt read()) genauso ist wie im RX-Pfad, ist NICHT automatisch
+// gegeben - DMA-Packing kann bei Schreib- und Leserichtung unterschiedlich
+// funktionieren. MUSS separat verifiziert werden (z.B. Rampen-Testmuster
+// senden, mit Logikanalysator an D0-D15 pruefen oder GNU-Radio-Vergleich).
+//
+// -> Bei Aenderung von Kernel-/Treiberversion, Pi-Modell oder Wechsel
+//    zwischen 8-/16-Bit-Modus IMMER neu verifizieren, bevor man sich auf
+//    den aktuell hier gesetzten Wert verlaesst!
+#define SWAP_SAMPLE_PAIRS 0    // Default aus, RX-Pfad nutzt denselben Treiber
+                               // - Verhalten RX/TX auf dem konkreten System aber unbedingt separat gegenpruefen!
+
+#if SWAP_SAMPLE_PAIRS
+// Vertauscht Paare von Sample-Einheiten (unit_size Byte gross) in-place:
+// [U0,U1,U2,U3,...] -> [U1,U0,U3,U2,...]. len MUSS ein ganzzahliges
+// Vielfaches von (2*unit_size) sein (BUFFER_SIZE = 4 MiB erfuellt das
+// fuer unit_size 1 und 2 problemlos).
+static inline void swap_sample_pairs(uint8_t *buf, size_t len, size_t unit_size) {
+    for (size_t i = 0; i + 2 * unit_size <= len; i += 2 * unit_size) {
+        for (size_t b = 0; b < unit_size; b++) {
+            uint8_t tmp = buf[i + b];
+            buf[i + b] = buf[i + unit_size + b];
+            buf[i + unit_size + b] = tmp;
+        }
+    }
+}
+#endif
+
+// Zuletzt per "width"-Kommando gesetzte Bitbreite. Wird nur von
+// control_thread geschrieben und von network_thread nur gelesen (analog zu
+// g_applied_width im RX-Pfad). Anders als im RX-Pfad ist hier kein
+// SCHED_FIFO-Echtzeit-Wettlauf um denselben fd zu beachten, ein einfacher
+// volatile Read reicht: width-Wechsel sind selten, und ein kurzzeitig
+// "veralteter" Wert waehrend der Umschaltung betrifft hoechstens einen
+// einzelnen 4-MiB-Pufferzyklus.
+volatile int g_current_width = 16;
+
 // --- Doppelpuffer für Port 1234 -------------------------------------------
 // Statt einer einzelnen active_buffer/buffer_ready-Variable (die bei
 // schnellem Timing überschrieben werden konnte) verwenden wir eine echte
@@ -172,6 +214,7 @@ void *control_thread(void *arg) {
             int w = atoi(cmd + 6);
             if (w == 8 || w == 16) {
                 cur_width = w;
+                g_current_width = w; // fuer swap_sample_pairs() im network_thread
                 update_smi_settings(cur_rate, cur_width);
             }
         }
@@ -274,6 +317,18 @@ void *network_thread(void *arg) {
                 }
                 rx += n;
             }
+
+#if SWAP_SAMPLE_PAIRS
+            // Direkt nach vollstaendigem Empfang und VOR dem Queue-Push,
+            // damit der zeitkritische write(smi_fd, ...) im Main-Thread
+            // nicht zusaetzlich belastet wird. unit_size an aktuelle Breite
+            // koppeln, NICHT hartkodieren - sonst wird bei width=8
+            // fehlerhaft geswappt (siehe RX-Pfad, g_applied_width).
+            {
+                size_t unit_size = (g_current_width == 16) ? 2 : 1;
+                swap_sample_pairs(fill_ptr, BUFFER_SIZE, unit_size);
+            }
+#endif
 
             // 3. SIGNAL: Puffer fertig -> in Queue einreihen, Main-Thread weckt auf.
             pthread_mutex_lock(&mutex);
