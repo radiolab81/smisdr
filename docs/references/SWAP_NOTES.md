@@ -104,6 +104,7 @@ Abschnitt "Was noch offen ist" unten.
 |---|---|---|---|
 | Broadcom-Datenblatt (Prosa) | 16-Bit, PXLDAT=1/WFORMAT=0 | Hardware-Register direkt | Nein |
 | Broadcom-Datenblatt (Diagramm) | 8-Bit, RGB565-Format | Hardware-Register direkt | Ja |
+| Kernel driver (`bcm2835_smi.c`, `raspberrypi/linux`, verified rpi-4.4.y through rpi-5.4.y) | 8-bit write (`SMIDSW_WSWAP` auto-set); no equivalent exists for 16-bit or for any read width | Kernel driver, register level | Yes (8-bit write only); no mechanism exists at all for reads |
 | Bentham `rpi_smi_adc_test.c` | 16-Bit | `/dev/mem` direkt | Nein (verifiziert per Oszi) |
 | Bentham `rpi_pixleds.c` | 8-Bit | `/dev/mem` direkt | Ja (`swap_bytes()`) |
 | Community-Kommentar (icarletto) | 8-Bit, DAC | `/dev/mem` direkt | Ja ("RGB565 ordering") |
