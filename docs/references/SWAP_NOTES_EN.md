@@ -95,15 +95,16 @@ but **not separately verified** — see "What's still open" below.
 
 ## Summary table
 
-| Source | Mode | Access path | Swap needed? |
-|---|---|---|---|
-| Broadcom datasheet (prose) | 16-bit, PXLDAT=1/WFORMAT=0 | Direct hardware register | No |
-| Broadcom datasheet (diagram) | 8-bit, RGB565 format | Direct hardware register | Yes |
-| Bentham `rpi_smi_adc_test.c` | 16-bit | Direct `/dev/mem` | No (verified via scope) |
-| Bentham `rpi_pixleds.c` | 8-bit | Direct `/dev/mem` | Yes (`swap_bytes()`) |
-| Community comment (icarletto) | 8-bit, DAC | Direct `/dev/mem` | Yes ("RGB565 ordering") |
-| **Our RX path** | 16-bit | Kernel driver `/dev/smi` | **Yes** (verified: ramp + GNU Radio) |
-| **Our TX path** | 16-bit | Kernel driver `/dev/smi` | Assumed (carried over structurally, **not separately verified**) |
+| Source                        | Mode                       | Access path              | Swap needed?                                                     |
+| ----------------------------- | -------------------------- | ------------------------ | ---------------------------------------------------------------- |
+| Broadcom datasheet (prose)    | 16-bit, PXLDAT=1/WFORMAT=0 | Direct hardware register | No                                                               |
+| Broadcom datasheet (diagram)  | 8-bit, RGB565 format       | Direct hardware register | Yes                                                              |
+| Kernel driver (`bcm2835_smi.c`, `raspberrypi/linux`, verified rpi-4.4.y through rpi-5.4.y) | 8-bit write (`SMIDSW_WSWAP` auto-set); no equivalent exists for 16-bit or for any read width | Kernel driver, register level | Yes (8-bit write only); no mechanism exists at all for reads |
+| Bentham `rpi_smi_adc_test.c`  | 16-bit                     | Direct `/dev/mem`        | No (verified via scope)                                          |
+| Bentham `rpi_pixleds.c`       | 8-bit                      | Direct `/dev/mem`        | Yes (`swap_bytes()`)                                             |
+| Community comment (icarletto) | 8-bit, DAC                 | Direct `/dev/mem`        | Yes ("RGB565 ordering")                                          |
+| **Our RX path**               | 16-bit                     | Kernel driver `/dev/smi` | **Yes** (verified: ramp + GNU Radio)                             |
+| **Our TX path**               | 16-bit                     | Kernel driver `/dev/smi` | Assumed (carried over structurally, **not separately verified**) |
 
 ## What this means if you're building your own
 
