@@ -103,6 +103,7 @@ but **not separately verified** — see "What's still open" below.
 | Bentham `rpi_smi_adc_test.c`  | 16-bit                     | Direct `/dev/mem`        | No (verified via scope)                                          |
 | Bentham `rpi_pixleds.c`       | 8-bit                      | Direct `/dev/mem`        | Yes (`swap_bytes()`)                                             |
 | Community comment (icarletto) | 8-bit, DAC                 | Direct `/dev/mem`        | Yes ("RGB565 ordering")                                          |
+| **Our RX path (8-bit)**       | 8-bit                      | Kernel driver `/dev/smi` | **Yes** (verified: ramp + GNU Radio, own ESP32 siggen test) |
 | **Our RX path**               | 16-bit                     | Kernel driver `/dev/smi` | **Yes** (verified: ramp + GNU Radio)                             |
 | **Our TX path**               | 16-bit                     | Kernel driver `/dev/smi` | Assumed (carried over structurally, **not separately verified**) |
 
