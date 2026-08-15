@@ -66,50 +66,11 @@ target-rate	cycles (total)	real-rate	error
 #define DATA_PORT_RX  1233 // Alternative: 1235 - einfach hier anpassen -> 1234 ist für die Gegenrichtung (Aussenden von HF) angedacht.
 #define CTRL_PORT 5000
 
-// --- Sample-Paar-Swap (SMI-DMA-Packing) ---------------------------------
-// WICHTIG: Ob dieser Swap noetig ist, haengt vom SMI-Kernel-Treiber
-// (bcm2835-smi) ab, NICHT direkt von der Hardware. Laut Broadcom-Datenblatt
-// (Abschnitt 6, PXLDAT=1/WFORMAT=0, 16-Bit) sollten Samples eigentlich in
-// natuerlicher Reihenfolge im FIFO/Speicher liegen (kein Swap noetig) -
-// in unserem konkreten Setup (Kernel 6.12, /dev/smi via ioctl) wurde
-// jedoch empirisch verifiziert (GNU-Radio-Aufnahme + Rampen-Testmuster),
-// dass ein paarweiser Swap TATSAECHLICH noetig ist, um korrekte
-// Sample-Reihenfolge zu erhalten. Vermutlich ein Treiber-spezifisches
-// Packing-Verhalten, das vom rohen Hardware-Verhalten laut Datenblatt
-// abweicht.
-//
-// -> Bei Aenderung von Kernel-/Treiberversion, Pi-Modell oder Wechsel
-//    zwischen 8-/16-Bit-Modus IMMER neu verifizieren (z.B. Rampen-Testmuster
-//    senden und mit GNU Radio / Logikanalysator gegenpruefen), bevor man
-//    sich auf den aktuell hier gesetzten Wert verlaesst!
-#define SWAP_SAMPLE_PAIRS 1
-
 // Zuletzt erfolgreich angewendete Bitbreite. Default passend zum
 // Startup-Aufruf update_smi_settings(5, 16) in main(). Wird danach nur
 // noch von smi_thread selbst geschrieben (dort, wo pending_width
 // angewendet wird) - somit exklusiv genutzt, kein Mutex noetig.
 static int g_applied_width = 16;
-
-
-#if SWAP_SAMPLE_PAIRS
-// Vertauscht Paare von Sample-Einheiten (unit_size Byte gross) in-place:
-// [U0,U1,U2,U3,...] -> [U1,U0,U3,U2,...]. len MUSS ein ganzzahliges
-// Vielfaches von (2*unit_size) sein (BUFFER_SIZE = 64 KiB erfuellt das
-// fuer unit_size 1 und 2 problemlos).
-static inline void swap_sample_pairs(uint8_t *buf, size_t len, size_t unit_size) {
-    for (size_t i = 0; i + 2 * unit_size <= len; i += 2 * unit_size) {
-        for (size_t b = 0; b < unit_size; b++) {
-            uint8_t tmp = buf[i + b];
-            buf[i + b] = buf[i + unit_size + b];
-            buf[i + unit_size + b] = tmp;
-        }
-    }
-}
-
-
-#endif
-
-
 
 // WICHTIG (Diagnose Wasserfall-Aussetzer):
 // Mit 4 MiB im vgl. zum TX, entsprach EIN Akquise-/Sende-Zyklus bei 5 MSPS/8-Bit ca. 0,84s
@@ -148,6 +109,105 @@ static inline void swap_sample_pairs(uint8_t *buf, size_t len, size_t unit_size)
 // die Akquise (die NIE warten darf, da die Hardware nicht pausierbar ist)
 // anfangen muss, alte, noch unversendete Daten zu verwerfen.
 #define NUM_BUFFERS 4
+
+// --- Laufzeit-Phasenerkennung fuer den Sample-Paar-Swap ---------------------
+// VORGESCHICHTE (siehe docs/references/SWAP_NOTES.md):
+// 1. Mit pack_data=1 packt die SMI-DMA-Engine mehrere Samples in ein
+//    gemeinsames 32-Bit-Wort. Empirisch nachgewiesen per GNU-Radio-
+//    Rampenaufnahme: ein statischer Software-Swap bei Puffer-Byte-Offset 0
+//    war nur bei ca. der Haelfte der Samples korrekt - die andere Haelfte
+//    lag in klar abgegrenzten Bloecken um exakt 1 Sample phasenverschoben.
+// 2. Versuch, das durch pack_data=0 (unverpackter Modus) strukturell zu
+//    umgehen, ist fehlgeschlagen: Der Kernel-Zeichentreiber (/dev/smi)
+//    haengt dabei nach dem ersten erfolgreichen Read in einem nicht
+//    unterbrechbaren Kernel-Zustand (CPU 100%, Prozess nicht per
+//    SIGINT/SIGTERM/SIGKILL beendbar) - der unverpackte DMA-Lesepfad ist
+//    im Treiber vermutlich nie ernsthaft getestet worden.
+// -> Deshalb: zurueck zu pack_data=1, aber mit AKTIVER Laufzeit-Erkennung
+//    der tatsaechlichen Paar-Phase PRO PUFFER, analog zu Jeremy Benthams
+//    ADS7884-Code (iosoft.blog, "Fast data capture with the Raspberry Pi"),
+//    der die Phasenbeziehung ebenfalls nicht als Konstante annimmt, sondern
+//    zu Beginn jeder Aufnahme aktiv bestimmt.
+//
+// METHODE: Kein zusaetzliches Kalibriermuster im Live-Datenstrom (das wuerde
+// das bewusst framing-lose Rohformat aendern). Stattdessen nutzen wir, dass
+// reale, bandbegrenzte Signale (RF nach Kanalfilterung, aber auch unsere
+// Rampen-Testmuster) von Sample zu Sample staerker korrelieren als eine
+// falsch gepaarte Sequenz. Auf einer kurzen Stichprobe werten wir BEIDE
+// moeglichen Paar-Phasen aus (Byte-Offset 0 vs. um 1 Sample verschoben) und
+// waehlen die mit der geringeren Summe absoluter Sample-zu-Sample-
+// Differenzen ("Rauheit") fuer den GESAMTEN Puffer.
+//
+// EINSCHRAENKUNG: Diese Heuristik setzt voraus, dass das Signal tatsaechlich
+// bandbegrenzt/korreliert ist. Bei echtem Breitband-Rauschen nahe der
+// Nyquist-Grenze kann die Erkennung unzuverlaessig werden - dann waere ein
+// echtes Kalibriermuster (wie bei Bentham) die robustere, aber invasivere
+// Alternative. Bei Verdacht auf Fehlerkennung: per GNU-Radio-Dump wie in
+// SWAP_NOTES.md beschrieben gegenpruefen.
+#define PHASE_PROBE_LEN 512   // Anzahl Samples fuer die Phasen-Testauswertung
+
+// Summe |x[i+1]-x[i]| ueber n_samples, interpretiert als unit_size-Byte-Werte
+// (1 = uint8, 2 = uint16 Little-Endian). Kleinerer Wert = glatteres Signal.
+static uint64_t sample_roughness(const uint8_t *data, size_t n_samples, size_t unit_size) {
+    uint64_t sum = 0;
+    if (n_samples < 2) return 0;
+    if (unit_size == 1) {
+        int32_t prev = data[0];
+        for (size_t i = 1; i < n_samples; i++) {
+            int32_t cur = data[i];
+            sum += (uint64_t)llabs((long long)(cur - prev));
+            prev = cur;
+        }
+    } else { // unit_size == 2
+        int32_t prev = data[0] | (data[1] << 8);
+        for (size_t i = 1; i < n_samples; i++) {
+            int32_t cur = data[i*2] | (data[i*2+1] << 8);
+            sum += (uint64_t)llabs((long long)(cur - prev));
+            prev = cur;
+        }
+    }
+    return sum;
+}
+
+// Vertauscht Paare von Sample-Einheiten (unit_size Byte gross) in-place,
+// beginnend ab Byte-Offset 'start_offset' (0 oder unit_size). Alles VOR
+// start_offset bleibt unveraendert stehen (Rand-Sample bei Phasenverschiebung
+// - dessen eigentlicher Paar-Partner war das letzte Sample des VORIGEN
+// Puffers, das bereits mit dessen eigener Phase korrigiert wurde; der
+// Fehler betrifft folglich hoechstens 1 von zehntausenden Samples je Puffer).
+static void swap_sample_pairs_from(uint8_t *buf, size_t len, size_t unit_size, size_t start_offset) {
+    for (size_t i = start_offset; i + 2 * unit_size <= len; i += 2 * unit_size) {
+        for (size_t b = 0; b < unit_size; b++) {
+            uint8_t tmp = buf[i + b];
+            buf[i + b] = buf[i + unit_size + b];
+            buf[i + unit_size + b] = tmp;
+        }
+    }
+}
+
+// Ermittelt die wahrscheinlich richtige Paar-Phase fuer DIESEN Puffer
+// (per Stichprobe, siehe Kommentar oben) und wendet den Swap entsprechend
+// auf den GESAMTEN Puffer an.
+static void apply_phase_corrected_swap(uint8_t *buf, size_t len, size_t unit_size) {
+    size_t probe_units = PHASE_PROBE_LEN;
+    size_t probe_bytes = probe_units * unit_size;
+    if (probe_bytes > len) { probe_bytes = len; probe_units = len / unit_size; }
+
+    uint8_t probe_a[PHASE_PROBE_LEN * 2]; // worst case unit_size=2
+    uint8_t probe_b[PHASE_PROBE_LEN * 2];
+    memcpy(probe_a, buf, probe_bytes);
+    memcpy(probe_b, buf, probe_bytes);
+
+    swap_sample_pairs_from(probe_a, probe_bytes, unit_size, 0);
+    swap_sample_pairs_from(probe_b, probe_bytes, unit_size, unit_size);
+
+    uint64_t roughness_a = sample_roughness(probe_a, probe_units, unit_size);
+    uint64_t roughness_b = sample_roughness(probe_b, probe_units, unit_size);
+
+    size_t chosen_offset = (roughness_b < roughness_a) ? unit_size : 0;
+    swap_sample_pairs_from(buf, len, unit_size, chosen_offset);
+}
+
 
 uint8_t *buffers[NUM_BUFFERS];
 int buf_busy[NUM_BUFFERS] = {0}; // 1 = Slot ist belegt (in Queue ODER wird gerade versendet)
@@ -263,6 +323,17 @@ void update_smi_settings(float msps, int width) {
     if (strobe <= 0) strobe = 1;
 
     settings.data_width = (width == 16) ? 1 : 0; // 0=8bit, 1=16bit
+    // pack_data=1: SMI-DMA packt mehrere Samples in ein gemeinsames 32-Bit-
+    // Wort. Das erzeugt einen Sample-Paar-Swap-Bedarf mit einer Phase, die
+    // sich PRO PUFFER undeterministisch verschieben kann (siehe
+    // docs/references/SWAP_NOTES.md) - wird per apply_phase_corrected_swap()
+    // im Akquise-Thread laufend erkannt und korrigiert (analog zu Jeremy
+    // Benthams ADS7884-Ansatz), statt hier statisch angenommen zu werden.
+    // pack_data=0 (unverpackter Modus) wurde bewusst NICHT gewaehlt: der
+    // Kernel-Zeichentreiber (/dev/smi) haengt dabei nach dem ersten Read in
+    // einem nicht unterbrechbaren Kernel-Zustand (100% CPU, nicht per
+    // SIGINT/SIGTERM/SIGKILL beendbar) - der Pfad ist im Treiber vermutlich
+    // nie ernsthaft getestet worden.
     settings.pack_data = 1;
 
     settings.read_setup_time  = setup;
@@ -608,18 +679,14 @@ void *smi_thread(void *arg) {
         }
         pthread_mutex_unlock(&smi_io_mutex);
 
-#if SWAP_SAMPLE_PAIRS
-        // Ausserhalb von smi_io_mutex (wird fuer den naechsten read() nicht
-        // mehr gebraucht) und noch vor mutex/Queue-Push, damit weder der
-        // naechste Akquise-Zyklus noch der Netzwerk-Thread unnoetig warten.
-        // unit_size = 1 Byte bei width=8, 2 Byte bei width=16 (siehe
-        // Kommentar oben) - NICHT immer 1 Byte, sonst werden bei width=16
-        // gueltige 16-Bit-Samples zerstoert.
         if (!read_error && rx == BUFFER_SIZE) {
+            // Laufzeit-Phasenerkennung statt statischer Annahme (Offset 0
+            // immer korrekt) - siehe Kommentar bei apply_phase_corrected_swap()
+            // weiter oben. unit_size an aktuelle Breite gekoppelt (1 Byte
+            // bei 8-Bit, 2 Byte bei 16-Bit).
             size_t unit_size = (g_applied_width == 16) ? 2 : 1;
-            swap_sample_pairs(ptr, BUFFER_SIZE, unit_size);
+            apply_phase_corrected_swap(ptr, BUFFER_SIZE, unit_size);
         }
-#endif
 
         pthread_mutex_lock(&mutex);
         if (!read_error && rx == BUFFER_SIZE) {
