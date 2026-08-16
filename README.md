@@ -148,9 +148,6 @@ echo -n "width 8" | nc -w 1 192.168.1.135 5000
 #### set 16 bit adc/dac width
 echo -n "width 16" | nc -w 1 192.168.1.135 5000
 
-#### recalibrate core frequency on-the-fly
-echo -n "recalib" | nc -w 1 192.168.1.135 5000
-
 192.168.1.135 ip addr of smisdr device (raspi4)
 
 The streaming daemon instantly displays the control data from port 5000 and adjusts the signal processing of the SMI accordingly in real time.  
