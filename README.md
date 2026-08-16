@@ -120,24 +120,6 @@ target-rate	cycles (total)	real-rate	error
 15.625 MSPS	  8	               15.6250 MSPS		0% (ok)
 25.0 MSPS	  5	               25.0000 MSPS		0% (ok) */
 ```
-#### A note on sample ordering (SWAP_SAMPLE_PAIRS)
-
-https://github.com/radiolab81/smisdr/blob/main/docs/references/SWAP_NOTES_EN.md
-
-Depending on your ADC/DAC bit width and the SMI kernel driver behaviour,
-consecutive 16-bit (or 8-bit) samples may arrive/leave **pair-swapped**
-in memory due to how the SMI DMA engine packs data into 32-bit words
-(`pack_data`/`PXLDAT` bit). This is a driver/hardware packing detail, not
-something documented consistently across kernel versions — we verified
-it empirically on our setup (kernel 6.12, `/dev/smi`) by streaming a
-known ramp pattern and comparing it in GNU Radio.
-
-If every second sample pair looks swapped, toggle `SWAP_SAMPLE_PAIRS` (0/1) at the top of
-`smi_tcp_streaming_dac.c` / `smi_udp_streaming_adc.c` and re-test.
-
-This must be re-verified whenever you change: kernel/driver version,
-Raspberry Pi model, or switch between 8-bit and 16-bit mode — it is not
-guaranteed to behave identically in all cases. So choose the right settings for your ADC/DAC HAT!
 
 ### repo-structure
 - `README.md`: This file
@@ -146,7 +128,6 @@ guaranteed to behave identically in all cases. So choose the right settings for 
 - `tcp_test.py`: test tool for generating and outputting a sine waveform at a specific data rate via TCP/localhost to smi_tcp_streaming_dac process
 - `gateware`: HDL code for FPGA extensions such as hardware-accelerated I/Q processing, DUC, DDC, ...
 - `smi_tcp_streaming_dac.c`: Main tool for (TX) streaming baseband or RF data, receives data on port 1234 from external computers/apps such as GNU Radio or from localhost with internal apps, can be build by `build_smi_tcp_streamig_dac.sh`
-- `smi_udp_streaming_adc.c`: Main tool for (RX) streaming baseband or RF data, sends data on port 1233 to external computers/apps such as GNU Radio, can be build by `build_smi_udp_streamig_adc.sh`
 
   Similar to a Red Pitaya, the streaming tools receive commands on port 5000 for on-the-fly adjustment of the sample rate and bus width (8/16 bits).
 
