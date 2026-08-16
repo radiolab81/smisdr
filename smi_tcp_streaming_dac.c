@@ -55,7 +55,7 @@ target-rate	cycles (total)	real-rate	error
 #define BUFFER_SIZE (4 * 1024 * 1024)
 
 // --- Sample-Paar-Swap (SMI-DMA-Packing) ------------------------------------
-// WICHTIG: Analog zum RX-Pfad (smi_udp_streaming_adc.c) haengt es vom
+// WICHTIG: Analog zum RX-Pfad haengt es vom
 // SMI-Kernel-Treiber (bcm2835-smi) ab, ob dieser Swap noetig ist - NICHT
 // direkt von der Hardware-Spezifikation. Laut Broadcom-Datenblatt
 // (Abschnitt 6, PXLDAT=1/WFORMAT=0, 16-Bit) sollten Samples eigentlich in
