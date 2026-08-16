@@ -217,13 +217,11 @@ smisdr talks to the outside world over two independent data channels and a separ
 | Port | Protocol | Direction | Content |
 |---|---|---|---|
 | **1234** | TCP | Host -> smisdr (TX) | Raw, pre-computed RF/baseband samples (8-bit or 16-bit), sent straight through as a byte stream. `smi_tcp_streaming_dac` forwards whatever arrives directly to the SMI/DAC bus at the configured rate and bit width. |
-| **1233** | UDP | smisdr -> Host (RX) | Raw ADC samples (8-bit or 16-bit) streamed by `smi_udp_streaming_adc` directly to the target IP and port configured via control commands. |
 | **5000** | TCP | Control | Plain ASCII text commands (`rate <MSPS>`, `width 8` / `width 16`, `dest <IP> <port>`, `recalib`) sent over short-lived connections, one command per connection, then the socket is closed again. |
 
 ### Data Paths in GNU Radio
 
 * **Transmit Path (TX / DAC):** Any flowgraph generating transmit samples ends in a **TCP Sink** connected to smisdr's IP on port 1234. For 8-bit widths, convert your samples to `byte`/`unsigned char` before the sink; for 16-bit widths, convert to `short`.
-* **Receive Path (RX / ADC):** Any flowgraph receiving RF data starts with a **UDP Source** bound to port 1233 (or the target port set via the `dest` command). Incoming data arrives as raw samples (`byte` for 8-bit, `short` for 16-bit) and can be cast directly into float or complex I/Q streams for further processing.
 
 No custom GNU Radio-side smisdr blocks are required for basic I/O — it's plain socket communication.
 
@@ -245,9 +243,6 @@ None of this needs a custom OOT block; it's ~30 lines of Python per command type
 An example (`smisdr_control.grc`) implementing exactly this pattern — sample-rate slider with change-only updates, an initial rate push on start, and two width buttons — can be found in `/grc/`.
 
 ![grc_ex](https://github.com/radiolab81/smisdr/blob/main/www/grc_control_smisdr.png)
-
-Pi4 <-> Pi4 test @ 25 MS (VLF to 12.5 MHz, radio & ut.stations)
-![wbtxrx](https://github.com/radiolab81/smisdr/blob/main/www/smiSDRwbTXRX.png)
 
 ### Extension package: in-band signaling with `gr-smisdr`
 
