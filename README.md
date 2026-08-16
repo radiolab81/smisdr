@@ -148,9 +148,6 @@ echo -n "width 8" | nc -w 1 192.168.1.135 5000
 #### set 16 bit adc/dac width
 echo -n "width 16" | nc -w 1 192.168.1.135 5000
 
-#### set UDP destination IP and port for RX streaming
-echo -n "dest 192.168.1.100 1233" | nc -w 1 192.168.1.135 5000
-
 #### recalibrate core frequency on-the-fly
 echo -n "recalib" | nc -w 1 192.168.1.135 5000
 
