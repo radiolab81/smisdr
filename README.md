@@ -1,17 +1,6 @@
 # smisdr
 Baseband/RF over Ethernet - powered by Raspberry Secondary Memory Interface (DMA - driven) - for Software Defined Radio
 
-## 🚧 Current Status: Restructuring & Active Development
-
-We are currently revising and restructuring this repository. The project is under active development with a focus on several key areas:
-
-* **Performance Optimization:** To address limitations with `/dev/smi`, we are actively experimenting with `/dev/mem` and a custom kernel driver to maximize performance gains.
-* **Receive Path (RX):** Preparing a dedicated receive branch, including Digital Down Converter (DDC) implementation in the gateware.
-* **64-Bit Migration:** Moving beyond our current 32-bit kernel (`armv7l`) to evaluate performance benefits on a full 64-bit architecture.
-* **Code Refactoring:** General code cleanup, architectural improvements, and laying the groundwork for upcoming features.
-*Stay tuned for upcoming updates!*
-
-
 ![main01](https://github.com/radiolab81/smisdr/blob/main/www/schematic.jpg)
 
 For high-speed connection of a DAC/ADC in SDR applications, the Raspberry Pi offers the Secondary Memory Interface (SMI). To enable this interface, you must make the following changes to the /boot/firmware/config.txt file to avoid resource conflicts, as the SMI occupies almost all GPIOs in the header.
@@ -134,11 +123,12 @@ target-rate	cycles (total)	real-rate	error
 
 ### repo-structure
 - `README.md`: This file
-- `smi_util.c`: Tool to read/write the current SMI settings and send/receive test data. You can build it with `make` (see Makefile)
-- `smi_sinus.c`: Tool for generating and outputting a sine waveform at a specific data rate, can be build by `build_smi_sinus.sh`
-- `tcp_test.py`: test tool for generating and outputting a sine waveform at a specific data rate via TCP/localhost to smi_tcp_streaming_dac process
+- `config.tx`: example /boot/firmware/config.tx for activation of smi-dev
+- `tools/smi_util.c`: Tool to read/write the current SMI settings and send/receive test data. You can build it with `make` (see Makefile)
+- `tools/smi_sinus.c`: Tool for generating and outputting a sine waveform at a specific data rate, can be build by `build_smi_sinus.sh`
+- `tools/tcp_test.py`: test tool for generating and outputting a sine waveform at a specific data rate via TCP/localhost to smi_tcp_streaming_dac process
 - `gateware`: HDL code for FPGA extensions such as hardware-accelerated I/Q processing, DUC, DDC, ...
-- `smi_tcp_streaming_dac.c`: Main tool for (TX) streaming baseband or RF data, receives data on port 1234 from external computers/apps such as GNU Radio or from localhost with internal apps, can be build by `build_smi_tcp_streamig_dac.sh`
+- `tx/smi_tcp_streaming_dac.c`: Main tool for (TX) streaming baseband or RF data, receives data on port 1234 from external computers/apps such as GNU Radio or from localhost with internal apps, can be build by `build_smi_tcp_streamig_dac.sh`
 
   Similar to a Red Pitaya, the streaming tools receive commands on port 5000 for on-the-fly adjustment of the sample rate and bus width (8/16 bits).
 
