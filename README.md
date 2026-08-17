@@ -133,7 +133,7 @@ target-rate	cycles (total)	real-rate	error
 
 ### repo-structure
 - `README.md`: This file
-- `config.tx`: example /boot/firmware/config.tx for activation of smi-dev
+- `config.txt`: example /boot/firmware/config.txt for activation of smi-dev
 - `tools/smi_util.c`: Tool to read/write the current SMI settings and send/receive test data. You can build it with `make` (see Makefile)
 - `tools/smi_sinus.c`: Tool for generating and outputting a sine waveform at a specific data rate, can be build by `build_smi_sinus.sh`
 - `tools/tcp_test.py`: test tool for generating and outputting a sine waveform at a specific data rate via TCP/localhost to smi_tcp_streaming_dac process
