@@ -1,6 +1,16 @@
 # smisdr
 Baseband/RF over Ethernet - powered by Raspberry Secondary Memory Interface (DMA - driven) - for Software Defined Radio
 
+## 🚧 Current Status: Restructuring & Active Development
+
+We are currently revising and restructuring this repository. The project is under active development with a focus on several key areas:
+
+* **Performance Optimization:** To address limitations with `/dev/smi`, we are actively experimenting with `/dev/mem` and a custom kernel driver to maximize performance gains.
+* **Receive Path (RX):** Preparing a dedicated receive branch, including Digital Down Converter (DDC) implementation in the gateware.
+* **64-Bit Migration:** Moving beyond our current 32-bit kernel (`armv7l`) to evaluate performance benefits on a full 64-bit architecture.
+* **Code Refactoring:** General code cleanup, architectural improvements, and laying the groundwork for upcoming features.
+*Stay tuned for upcoming updates!*
+
 ![main01](https://github.com/radiolab81/smisdr/blob/main/www/schematic.jpg)
 
 For high-speed connection of a DAC/ADC in SDR applications, the Raspberry Pi offers the Secondary Memory Interface (SMI). To enable this interface, you must make the following changes to the /boot/firmware/config.txt file to avoid resource conflicts, as the SMI occupies almost all GPIOs in the header.
